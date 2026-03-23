@@ -28,9 +28,15 @@ export default function ProviderDetailPage() {
     async function load() {
       try {
         const [pRes, cRes, bRes] = await Promise.all([
-          fetch(`/api/providers/${id}`).then((r) => r.json()),
-          fetch(`/api/providers/${id}/cars`).then((r) => r.json()),
-          fetch(`/api/providers/${id}/cars/bookings`).then((r) => r.json()),
+          fetch(`${process.env.BACKEND_URL}/api/providers/${id}`).then((r) =>
+            r.json(),
+          ),
+          fetch(`${process.env.BACKEND_URL}/api/providers/${id}/cars`).then(
+            (r) => r.json(),
+          ),
+          fetch(
+            `${process.env.BACKEND_URL}/api/providers/${id}/cars/bookings`,
+          ).then((r) => r.json()),
         ]);
         if (pRes.success) setProvider(pRes.data);
         if (cRes.success) setCars(cRes.data);
