@@ -1,0 +1,73 @@
+@import "tailwindcss";
+
+@layer base {
+  :root {
+    --font-display: "Outfit", ui-sans-serif, system-ui, sans-serif;
+    --font-body: "DM Sans", ui-sans-serif, system-ui, sans-serif;
+  }
+
+  * { box-sizing: border-box; }
+
+  body {
+    font-family: var(--font-body);
+    background: #f8fafc;
+    color: #1e293b;
+    -webkit-font-smoothing: antialiased;
+  }
+
+  h1, h2, h3, h4 {
+    font-family: var(--font-display);
+  }
+
+  ::selection {
+    background: #6366f1;
+    color: white;
+  }
+}
+
+@layer components {
+  .btn-primary {
+    @apply px-5 py-2.5 text-sm font-semibold bg-indigo-600 text-white rounded-xl hover:bg-indigo-700 transition-all shadow-sm shadow-indigo-500/20 hover:shadow-indigo-500/30 active:scale-[0.98] disabled:opacity-50 disabled:cursor-not-allowed;
+  }
+
+  .btn-secondary {
+    @apply px-5 py-2.5 text-sm font-semibold bg-white text-slate-700 rounded-xl border border-slate-200 hover:bg-slate-50 hover:border-slate-300 transition-all active:scale-[0.98];
+  }
+
+  .btn-danger {
+    @apply px-5 py-2.5 text-sm font-semibold bg-red-600 text-white rounded-xl hover:bg-red-700 transition-all shadow-sm active:scale-[0.98];
+  }
+
+  .card {
+    @apply bg-white rounded-2xl border border-slate-200/80 shadow-sm hover:shadow-md transition-shadow;
+  }
+
+  .input-field {
+    @apply w-full px-4 py-3 text-sm border border-slate-200 rounded-xl bg-white text-slate-800 placeholder:text-slate-400 focus:outline-none focus:ring-2 focus:ring-indigo-500 focus:border-indigo-500 transition-all;
+  }
+
+  .label {
+    @apply block text-sm font-medium text-slate-700 mb-1.5;
+  }
+}
+
+@keyframes fade-in-up {
+  from { opacity: 0; transform: translateY(12px); }
+  to   { opacity: 1; transform: translateY(0); }
+}
+
+.animate-fade-in-up {
+  animation: fade-in-up 0.5s ease-out forwards;
+}
+
+.stagger-children > * {
+  opacity: 0;
+  animation: fade-in-up 0.4s ease-out forwards;
+}
+.stagger-children > *:nth-child(1) { animation-delay: 0.04s; }
+.stagger-children > *:nth-child(2) { animation-delay: 0.08s; }
+.stagger-children > *:nth-child(3) { animation-delay: 0.12s; }
+.stagger-children > *:nth-child(4) { animation-delay: 0.16s; }
+.stagger-children > *:nth-child(5) { animation-delay: 0.20s; }
+.stagger-children > *:nth-child(6) { animation-delay: 0.24s; }
+.stagger-children > *:nth-child(n+7) { animation-delay: 0.28s; }
