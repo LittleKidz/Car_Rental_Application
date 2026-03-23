@@ -1,5 +1,6 @@
 import type { AuthOptions } from "next-auth";
 import CredentialsProvider from "next-auth/providers/credentials";
+import { JWT } from "next-auth/jwt";
 
 export const authOptions: AuthOptions = {
   providers: [
@@ -51,7 +52,7 @@ export const authOptions: AuthOptions = {
   callbacks: {
     async jwt({ token, user }) {
       if (user) {
-        return { ...token, ...user };
+        return { ...token, ...user } as JWT;
       }
       return token;
     },
