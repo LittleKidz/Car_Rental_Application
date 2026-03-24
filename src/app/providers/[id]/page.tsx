@@ -6,17 +6,10 @@ import { useSession } from "next-auth/react";
 import { useDispatch, useSelector } from "react-redux";
 import { addToCart } from "@/redux/features/cartSlice";
 import { RootState, AppDispatch } from "@/redux/store";
-import type { Provider, Car } from "@/types";
-
-interface Booking { car: string; rentalDate: string; returnDate: string; }
-
-async function safeFetch(url: string) {
-  try {
-    const res = await fetch(url);
-    if (!res.ok) return null;
-    return await res.json();
-  } catch { return null; }
-}
+import type { Provider, Car, Booking } from "@/types";
+import { safeFetch, calcDays, datesOverlap, COLOR_MAP, today } from "@/libs/utils";
+import { useToast, Toast } from "@/components/ui/Toast";
+import Loading from "@/components/ui/Loading";
 
 export default function ProviderDetailPage() {
   const { id } = useParams();
@@ -31,18 +24,17 @@ export default function ProviderDetailPage() {
   const [loading, setLoading] = useState(true);
   const [pickupDate, setPickupDate] = useState("");
   const [returnDate, setReturnDate] = useState("");
-  const [toast, setToast] = useState("");
+  const [toast, showToast] = useToast();
 
   useEffect(() => {
     async function load() {
-      // Each fetch is independent — one failing won't break others
-      const pRes = await safeFetch(`/api/providers/${id}`);
+      const pRes = await safeFetch<{ success: boolean; data: Provider }>(`/api/providers/${id}`);
       if (pRes?.success) setProvider(pRes.data);
 
-      const cRes = await safeFetch(`/api/providers/${id}/cars`);
+      const cRes = await safeFetch<{ success: boolean; data: Car[] }>(`/api/providers/${id}/cars`);
       if (cRes?.success) setCars(cRes.data);
 
-      const bRes = await safeFetch(`/api/providers/${id}/cars/bookings`);
+      const bRes = await safeFetch<{ success: boolean; data: Booking[] }>(`/api/providers/${id}/cars/bookings`);
       if (bRes?.success) setBookings(bRes.data || []);
 
       setLoading(false);
@@ -50,56 +42,43 @@ export default function ProviderDetailPage() {
     load();
   }, [id]);
 
-  const showToast = (msg: string) => { setToast(msg); setTimeout(() => setToast(""), 3000); };
+  const datesSelected = !!(pickupDate && returnDate && new Date(returnDate) > new Date(pickupDate));
+  const days = calcDays(pickupDate, returnDate);
 
-  const isCarBooked = (carId: string): boolean => {
-    if (!pickupDate || !returnDate) return false;
-    const pickup = new Date(pickupDate), ret = new Date(returnDate);
-    return bookings.some((b) => b.car === carId && new Date(b.rentalDate) < ret && new Date(b.returnDate) > pickup);
-  };
+  const isCarBooked = (carId: string) =>
+    datesSelected && bookings.some((b) => b.car === carId && datesOverlap(b.rentalDate, b.returnDate, pickupDate, returnDate));
 
-  const isCarInCart = (carId: string): boolean => {
-    if (!pickupDate || !returnDate) return false;
-    const pickup = new Date(pickupDate), ret = new Date(returnDate);
-    return cartItems.some((item) => item.car._id === carId && new Date(item.rentalDate) < ret && new Date(item.returnDate) > pickup);
-  };
+  const isCarInCart = (carId: string) =>
+    datesSelected && cartItems.some((item) => item.car._id === carId && datesOverlap(item.rentalDate, item.returnDate, pickupDate, returnDate));
 
   const handleAddToCart = (car: Car) => {
     if (!session) { router.push("/login"); return; }
-    if (!pickupDate || !returnDate) { showToast("Please select both pickup and return dates"); return; }
-    if (new Date(returnDate) <= new Date(pickupDate)) { showToast("Return date must be after pickup date"); return; }
+    if (!datesSelected) { showToast("Please select both pickup and return dates"); return; }
     if (cartItems.length >= 3 && session.user.role !== "admin") { showToast("Maximum 3 rentals allowed"); return; }
     if (isCarBooked(car._id)) { showToast("This car is already booked for those dates"); return; }
     if (isCarInCart(car._id)) { showToast("This car is already in your cart for overlapping dates"); return; }
     if (!provider) return;
+
     dispatch(addToCart({ provider, car, rentalDate: pickupDate, returnDate }));
     showToast(`${car.brand} ${car.model} added to cart!`);
   };
 
-  const calcDays = () => {
-    if (!pickupDate || !returnDate) return 0;
-    return Math.max(0, Math.ceil((new Date(returnDate).getTime() - new Date(pickupDate).getTime()) / 86400000));
-  };
-  const days = calcDays();
+  if (loading) return <Loading />;
+  if (!provider) return <div className="max-w-7xl mx-auto px-4 sm:px-6 py-20 text-center text-slate-400">Provider not found.</div>;
 
-  if (loading) {
-    return <div className="max-w-7xl mx-auto px-4 sm:px-6 py-20 text-center"><div className="w-8 h-8 border-2 border-indigo-600 border-t-transparent rounded-full animate-spin mx-auto" /></div>;
-  }
-  if (!provider) {
-    return <div className="max-w-7xl mx-auto px-4 sm:px-6 py-20 text-center text-slate-400">Provider not found.</div>;
-  }
-
-  const today = new Date().toISOString().split("T")[0];
-  const datesSelected = !!(pickupDate && returnDate && new Date(returnDate) > new Date(pickupDate));
+  const todayStr = today();
 
   return (
     <div className="max-w-7xl mx-auto px-4 sm:px-6 py-12">
-      {toast && <div className="fixed bottom-6 right-6 z-50 bg-white border border-slate-200 shadow-xl rounded-xl px-5 py-3 text-sm text-slate-700 animate-fade-in-up">{toast}</div>}
+      <Toast message={toast} />
 
+      {/* Provider Info */}
       <div className="card p-6 sm:p-8 mb-8 animate-fade-in-up">
         <div className="flex flex-col sm:flex-row sm:items-center gap-4">
           <div className="w-14 h-14 rounded-xl bg-indigo-50 text-indigo-600 flex items-center justify-center shrink-0">
-            <svg className="w-7 h-7" fill="none" viewBox="0 0 24 24" stroke="currentColor" strokeWidth={1.5}><path strokeLinecap="round" strokeLinejoin="round" d="M3.75 21h16.5M4.5 3h15M5.25 3v18m13.5-18v18M9 6.75h1.5m-1.5 3h1.5m-1.5 3h1.5m3-6H15m-1.5 3H15m-1.5 3H15M9 21v-3.375c0-.621.504-1.125 1.125-1.125h3.75c.621 0 1.125.504 1.125 1.125V21" /></svg>
+            <svg className="w-7 h-7" fill="none" viewBox="0 0 24 24" stroke="currentColor" strokeWidth={1.5}>
+              <path strokeLinecap="round" strokeLinejoin="round" d="M3.75 21h16.5M4.5 3h15M5.25 3v18m13.5-18v18M9 6.75h1.5m-1.5 3h1.5m-1.5 3h1.5m3-6H15m-1.5 3H15m-1.5 3H15M9 21v-3.375c0-.621.504-1.125 1.125-1.125h3.75c.621 0 1.125.504 1.125 1.125V21" />
+            </svg>
           </div>
           <div className="flex-1">
             <h1 className="text-2xl font-bold text-slate-900">{provider.name}</h1>
@@ -109,19 +88,20 @@ export default function ProviderDetailPage() {
         </div>
       </div>
 
+      {/* Date Pickers */}
       <div className="card p-5 mb-8 animate-fade-in-up">
         <div className="flex flex-col sm:flex-row sm:items-end gap-4">
           <div className="flex-1">
             <label className="label">Pickup Date</label>
             <input type="date" className="input-field" value={pickupDate}
               onChange={(e) => { setPickupDate(e.target.value); if (returnDate && e.target.value >= returnDate) setReturnDate(""); }}
-              min={today} />
+              min={todayStr} />
           </div>
           <div className="flex-1">
             <label className="label">Return Date</label>
             <input type="date" className="input-field" value={returnDate}
               onChange={(e) => setReturnDate(e.target.value)}
-              min={pickupDate || today} disabled={!pickupDate} />
+              min={pickupDate || todayStr} disabled={!pickupDate} />
           </div>
           {days > 0 && (
             <div className="shrink-0 pb-1">
@@ -135,6 +115,7 @@ export default function ProviderDetailPage() {
         {pickupDate && !returnDate && <p className="text-xs text-amber-600 mt-2">Please select a return date to see availability</p>}
       </div>
 
+      {/* Cars */}
       <h2 className="text-xl font-bold text-slate-900 mb-5">Cars ({cars.length})</h2>
 
       {cars.length === 0 ? (
@@ -142,14 +123,9 @@ export default function ProviderDetailPage() {
       ) : (
         <div className="grid sm:grid-cols-2 lg:grid-cols-3 gap-5 stagger-children">
           {cars.map((car) => {
-            const colorMap: Record<string, string> = {
-              red:"bg-red-500",blue:"bg-blue-500",black:"bg-gray-800",white:"bg-white border border-slate-300",
-              silver:"bg-slate-300",gray:"bg-gray-400",green:"bg-green-500",yellow:"bg-yellow-400",
-              orange:"bg-orange-500",brown:"bg-amber-700",pink:"bg-pink-400",purple:"bg-purple-500",
-            };
-            const colorClass = colorMap[car.color.toLowerCase()] || "bg-slate-400";
-            const booked = datesSelected && isCarBooked(car._id);
-            const inCart = datesSelected && isCarInCart(car._id);
+            const colorClass = COLOR_MAP[car.color.toLowerCase()] || "bg-slate-400";
+            const booked = isCarBooked(car._id);
+            const inCart = isCarInCart(car._id);
             const unavailable = !car.available || booked || inCart;
 
             let statusLabel = "Available", statusColor = "bg-emerald-50 text-emerald-700";

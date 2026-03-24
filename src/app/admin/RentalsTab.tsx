@@ -1,16 +1,14 @@
 "use client";
 
-import { useSession } from "next-auth/react";
 import { useEffect, useState } from "react";
-import type { Rental, Provider, Car } from "@/types";
-import { toInputDate } from "@/libs/utils";
+import type { Rental, Provider, Car, User } from "@/types";
 import { useToast, Toast } from "@/components/ui/Toast";
 import Loading from "@/components/ui/Loading";
 import DateRangeDisplay from "@/components/ui/DateRangeDisplay";
 import DateRangePicker from "@/components/ui/DateRangePicker";
+import { toInputDate } from "@/libs/utils";
 
-export default function RentalsPage() {
-  const { data: session, status } = useSession();
+export default function RentalsTab({ token }: { token: string }) {
   const [rentals, setRentals] = useState<Rental[]>([]);
   const [loading, setLoading] = useState(true);
   const [editId, setEditId] = useState<string | null>(null);
@@ -18,79 +16,49 @@ export default function RentalsPage() {
   const [editReturn, setEditReturn] = useState("");
   const [toast, showToast] = useToast();
 
-  const fetchRentals = async (token: string) => {
-    try {
-      const res = await fetch("/api/rentals", {
-        headers: { Authorization: `Bearer ${token}` },
-      });
-      const data = await res.json();
-      if (data.success) setRentals(data.data);
-    } catch (err) {
-      console.error("Failed to fetch rentals:", err);
-    }
+  const load = async () => {
+    const res = await fetch("/api/rentals", {
+      headers: { Authorization: `Bearer ${token}` },
+    }).then((r) => r.json());
+    if (res.success) setRentals(res.data);
     setLoading(false);
   };
 
-  useEffect(() => {
-    if (status === "authenticated" && session?.user.token) {
-      fetchRentals(session.user.token);
-    } else if (status === "unauthenticated") {
-      setLoading(false);
-    }
-  }, [status, session]);
+  useEffect(() => { load(); }, []);
 
   const handleDelete = async (id: string) => {
-    if (!confirm("Are you sure you want to delete this rental?")) return;
+    if (!confirm("Delete this rental?")) return;
     const res = await fetch(`/api/rentals/${id}`, {
-      method: "DELETE",
-      headers: { Authorization: `Bearer ${session!.user.token}` },
+      method: "DELETE", headers: { Authorization: `Bearer ${token}` },
     }).then((r) => r.json());
-    if (res.success) {
-      showToast("Rental deleted");
-      fetchRentals(session!.user.token);
-    }
+    if (res.success) { showToast("Deleted!"); load(); }
   };
 
   const handleUpdate = async (id: string) => {
-    if (new Date(editReturn) <= new Date(editPickup)) {
-      showToast("Return date must be after pickup date");
-      return;
-    }
     const res = await fetch(`/api/rentals/${id}`, {
       method: "PUT",
-      headers: { "Content-Type": "application/json", Authorization: `Bearer ${session!.user.token}` },
+      headers: { "Content-Type": "application/json", Authorization: `Bearer ${token}` },
       body: JSON.stringify({ rentalDate: editPickup, returnDate: editReturn }),
     }).then((r) => r.json());
-    if (res.success) {
-      showToast("Rental updated");
-      setEditId(null);
-      fetchRentals(session!.user.token);
-    } else {
-      showToast(res.message || "Failed to update");
-    }
+    if (res.success) { showToast("Updated!"); setEditId(null); load(); }
+    else showToast(res.message || "Failed to update");
   };
 
   if (loading) return <Loading />;
 
   return (
-    <div className="max-w-5xl mx-auto px-4 sm:px-6 py-12">
+    <div>
       <Toast message={toast} />
-
-      <div className="mb-10 animate-fade-in-up">
-        <h1 className="text-3xl font-bold text-slate-900 mb-2">My Rentals</h1>
-        <p className="text-slate-500">Manage your car rental bookings</p>
-      </div>
+      <h2 className="text-lg font-semibold text-slate-800 mb-6">All Rentals ({rentals.length})</h2>
 
       {rentals.length === 0 ? (
-        <div className="text-center py-20 text-slate-400">
-          <p className="mb-4">No rentals yet.</p>
-          <a href="/providers" className="btn-primary text-sm">Browse Providers</a>
-        </div>
+        <div className="text-center py-16 text-slate-400">No rentals found.</div>
       ) : (
         <div className="space-y-4 stagger-children">
           {rentals.map((r) => {
             const prov = r.provider as Provider;
             const car = r.car as Car | undefined;
+            const user = r.user as User;
 
             return (
               <div key={r._id} className="card overflow-hidden">
@@ -106,6 +74,7 @@ export default function RentalsPage() {
                         <h3 className="font-semibold text-slate-900">{car ? `${car.brand} ${car.model}` : "Car"}</h3>
                         {car && <span className="text-xs text-slate-400">{car.licensePlate}</span>}
                       </div>
+                      <p className="text-sm text-slate-500">{user?.name} ({user?.email})</p>
                       <p className="text-sm text-slate-500 mt-1">Provider: {prov?.name || "Unknown"}</p>
 
                       {editId === r._id ? (
@@ -125,10 +94,7 @@ export default function RentalsPage() {
 
                     {editId !== r._id && (
                       <div className="flex items-center gap-2 shrink-0">
-                        <button
-                          onClick={() => { setEditId(r._id); setEditPickup(toInputDate(r.rentalDate)); setEditReturn(toInputDate(r.returnDate)); }}
-                          className="btn-secondary text-xs px-3 py-2"
-                        >Edit</button>
+                        <button onClick={() => { setEditId(r._id); setEditPickup(toInputDate(r.rentalDate)); setEditReturn(toInputDate(r.returnDate)); }} className="btn-secondary text-xs px-3 py-2">Edit</button>
                         <button onClick={() => handleDelete(r._id)} className="btn-danger text-xs px-3 py-2">Delete</button>
                       </div>
                     )}

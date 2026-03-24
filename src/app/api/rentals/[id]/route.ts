@@ -1,67 +1,8 @@
-import { NextRequest, NextResponse } from "next/server";
+import { NextRequest } from "next/server";
+import { proxy } from "@/libs/proxy";
 
-const BACKEND = process.env.BACKEND_URL;
+type Ctx = { params: { id: string } };
 
-export async function GET(
-  req: NextRequest,
-  { params }: { params: { id: string } },
-) {
-  try {
-    const token = req.headers.get("authorization") || "";
-    const res = await fetch(`${BACKEND}/api/rentals/${params.id}`, {
-      headers: { Authorization: token, "Content-Type": "application/json" },
-    });
-    const data = await res.json();
-    return NextResponse.json(data, { status: res.status });
-  } catch (err) {
-    console.error("Proxy error:", err);
-    return NextResponse.json(
-      { success: false, message: "Server error" },
-      { status: 500 },
-    );
-  }
-}
-
-export async function PUT(
-  req: NextRequest,
-  { params }: { params: { id: string } },
-) {
-  try {
-    const token = req.headers.get("authorization") || "";
-    const body = await req.json();
-    const res = await fetch(`${BACKEND}/api/rentals/${params.id}`, {
-      method: "PUT",
-      headers: { Authorization: token, "Content-Type": "application/json" },
-      body: JSON.stringify(body),
-    });
-    const data = await res.json();
-    return NextResponse.json(data, { status: res.status });
-  } catch (err) {
-    console.error("Proxy error:", err);
-    return NextResponse.json(
-      { success: false, message: "Server error" },
-      { status: 500 },
-    );
-  }
-}
-
-export async function DELETE(
-  req: NextRequest,
-  { params }: { params: { id: string } },
-) {
-  try {
-    const token = req.headers.get("authorization") || "";
-    const res = await fetch(`${BACKEND}/api/rentals/${params.id}`, {
-      method: "DELETE",
-      headers: { Authorization: token, "Content-Type": "application/json" },
-    });
-    const data = await res.json();
-    return NextResponse.json(data, { status: res.status });
-  } catch (err) {
-    console.error("Proxy error:", err);
-    return NextResponse.json(
-      { success: false, message: "Server error" },
-      { status: 500 },
-    );
-  }
-}
+export const GET    = (req: NextRequest, { params }: Ctx) => proxy(`/api/rentals/${params.id}`, req, { auth: true });
+export const PUT    = (req: NextRequest, { params }: Ctx) => proxy(`/api/rentals/${params.id}`, req, { auth: true });
+export const DELETE = (req: NextRequest, { params }: Ctx) => proxy(`/api/rentals/${params.id}`, req, { auth: true, method: "DELETE" });
