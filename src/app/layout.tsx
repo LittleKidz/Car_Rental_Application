@@ -10,7 +10,7 @@ export const metadata: Metadata = {
   title: "GoGo — Rental Car Booking",
   description: "Book your perfect ride from top rental car providers",
   icons: {
-    icon: "/img/GoGo.png",
+    icon: "/img/GoGo.ico",
   },
 };
 
