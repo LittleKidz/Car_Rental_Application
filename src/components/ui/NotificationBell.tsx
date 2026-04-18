@@ -4,7 +4,7 @@ import { useSession } from "next-auth/react";
 import { useEffect, useRef, useState } from "react";
 import type { Notification } from "@/types";
 
-const POLL_INTERVAL_MS = 30_000;
+const POLL_INTERVAL_MS = 5_000;
 
 export default function NotificationBell() {
   const { data: session } = useSession();
@@ -62,7 +62,7 @@ export default function NotificationBell() {
       headers: { Authorization: `Bearer ${token}` },
     });
     setNotifications((prev) =>
-      prev.map((n) => (n._id === id ? { ...n, read: true } : n))
+      prev.map((n) => (n._id === id ? { ...n, read: true } : n)),
     );
   };
 
@@ -77,8 +77,18 @@ export default function NotificationBell() {
         title="Notifications"
         aria-label={`Notifications${unreadCount > 0 ? ` (${unreadCount} unread)` : ""}`}
       >
-        <svg className="w-5 h-5" fill="none" viewBox="0 0 24 24" stroke="currentColor" strokeWidth={2}>
-          <path strokeLinecap="round" strokeLinejoin="round" d="M15 17h5l-1.405-1.405A2.032 2.032 0 0118 14.158V11a6.002 6.002 0 00-4-5.659V5a2 2 0 10-4 0v.341C7.67 6.165 6 8.388 6 11v3.159c0 .538-.214 1.055-.595 1.436L4 17h5m6 0v1a3 3 0 11-6 0v-1m6 0H9" />
+        <svg
+          className="w-5 h-5"
+          fill="none"
+          viewBox="0 0 24 24"
+          stroke="currentColor"
+          strokeWidth={2}
+        >
+          <path
+            strokeLinecap="round"
+            strokeLinejoin="round"
+            d="M15 17h5l-1.405-1.405A2.032 2.032 0 0118 14.158V11a6.002 6.002 0 00-4-5.659V5a2 2 0 10-4 0v.341C7.67 6.165 6 8.388 6 11v3.159c0 .538-.214 1.055-.595 1.436L4 17h5m6 0v1a3 3 0 11-6 0v-1m6 0H9"
+          />
         </svg>
         {unreadCount > 0 && (
           <span className="absolute -top-0.5 -right-0.5 w-4 h-4 rounded-full bg-indigo-600 text-white text-[9px] font-bold flex items-center justify-center">
@@ -91,9 +101,14 @@ export default function NotificationBell() {
       {open && (
         <div className="absolute right-0 top-10 w-80 bg-white border border-slate-200 rounded-2xl shadow-xl z-50 overflow-hidden">
           <div className="flex items-center justify-between px-4 py-3 border-b border-slate-100">
-            <span className="text-sm font-semibold text-slate-800">Notifications</span>
+            <span className="text-sm font-semibold text-slate-800">
+              Notifications
+            </span>
             {unreadCount > 0 && (
-              <button onClick={handleMarkAllRead} className="text-xs text-indigo-600 hover:underline">
+              <button
+                onClick={handleMarkAllRead}
+                className="text-xs text-indigo-600 hover:underline"
+              >
                 Mark all read
               </button>
             )}
@@ -101,7 +116,9 @@ export default function NotificationBell() {
 
           <div className="max-h-80 overflow-y-auto divide-y divide-slate-50">
             {notifications.length === 0 ? (
-              <div className="px-4 py-8 text-center text-sm text-slate-400">No notifications yet</div>
+              <div className="px-4 py-8 text-center text-sm text-slate-400">
+                No notifications yet
+              </div>
             ) : (
               notifications.map((n) => (
                 <button
@@ -110,12 +127,19 @@ export default function NotificationBell() {
                   className={`w-full text-left px-4 py-3 hover:bg-slate-50 transition-colors ${!n.read ? "bg-indigo-50/40" : ""}`}
                 >
                   <div className="flex items-start gap-2.5">
-                    <div className={`mt-1 w-2 h-2 rounded-full shrink-0 ${n.read ? "bg-slate-200" : "bg-indigo-500"}`} />
+                    <div
+                      className={`mt-1 w-2 h-2 rounded-full shrink-0 ${n.read ? "bg-slate-200" : "bg-indigo-500"}`}
+                    />
                     <div className="flex-1 min-w-0">
-                      <p className="text-xs text-slate-700 leading-snug">{n.message}</p>
+                      <p className="text-xs text-slate-700 leading-snug">
+                        {n.message}
+                      </p>
                       <p className="text-[10px] text-slate-400 mt-1">
                         {new Date(n.createdAt).toLocaleString("en-GB", {
-                          day: "2-digit", month: "short", hour: "2-digit", minute: "2-digit",
+                          day: "2-digit",
+                          month: "short",
+                          hour: "2-digit",
+                          minute: "2-digit",
                         })}
                       </p>
                     </div>
