@@ -6,21 +6,14 @@
 
 const API = process.env.BACKEND_URL || "http://localhost:5000";
 
-type FetchOptions = RequestInit & { next?: { revalidate?: number } };
-
-async function fetchJSON<T>(path: string, options?: FetchOptions): Promise<T> {
-  const fetchOptions: FetchOptions = options?.next
-    ? options
-    : { cache: "no-cache", ...options };
-  const res = await fetch(`${API}${path}`, fetchOptions as RequestInit);
+async function fetchJSON<T>(path: string, options?: RequestInit): Promise<T> {
+  const res = await fetch(`${API}${path}`, { cache: "no-cache", ...options });
   if (!res.ok) throw new Error(`Failed to fetch ${path}`);
   return res.json();
 }
 
 export function getProviders() {
-  return fetchJSON<{ success: boolean; count: number; data: import("@/types").Provider[] }>("/api/providers", {
-    next: { revalidate: 60 },
-  });
+  return fetchJSON<{ success: boolean; count: number; data: import("@/types").Provider[] }>("/api/providers");
 }
 
 export function getProvider(id: string) {

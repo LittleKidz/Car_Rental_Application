@@ -28,14 +28,15 @@ export default function ProviderDetailPage() {
 
   useEffect(() => {
     async function load() {
-      const [pRes, cRes, bRes] = await Promise.all([
-        safeFetch<{ success: boolean; data: Provider }>(`/api/providers/${id}`),
-        safeFetch<{ success: boolean; data: Car[] }>(`/api/providers/${id}/cars`),
-        safeFetch<{ success: boolean; data: Booking[] }>(`/api/providers/${id}/cars/bookings`),
-      ]);
+      const pRes = await safeFetch<{ success: boolean; data: Provider }>(`/api/providers/${id}`);
       if (pRes?.success) setProvider(pRes.data);
+
+      const cRes = await safeFetch<{ success: boolean; data: Car[] }>(`/api/providers/${id}/cars`);
       if (cRes?.success) setCars(cRes.data);
+
+      const bRes = await safeFetch<{ success: boolean; data: Booking[] }>(`/api/providers/${id}/cars/bookings`);
       if (bRes?.success) setBookings(bRes.data || []);
+
       setLoading(false);
     }
     load();
@@ -135,7 +136,7 @@ export default function ProviderDetailPage() {
             return (
               <div key={car._id} className={`card overflow-hidden ${unavailable ? "opacity-60" : ""}`}>
                 <div className="relative h-44 bg-slate-100 overflow-hidden">
-                  <img src={car.image || "https://images.unsplash.com/photo-1494976388531-d1058494cdd8?w=800&q=80"} alt={`${car.brand} ${car.model}`} loading="lazy" className="w-full h-full object-cover" />
+                  <img src={car.image || "https://images.unsplash.com/photo-1494976388531-d1058494cdd8?w=800&q=80"} alt={`${car.brand} ${car.model}`} className="w-full h-full object-cover" />
                   {unavailable && (
                     <div className="absolute inset-0 bg-black/40 flex items-center justify-center">
                       <span className="text-white text-sm font-semibold bg-red-600 px-3 py-1 rounded-full">{!car.available ? "Unavailable" : booked ? "Booked" : "In Cart"}</span>
