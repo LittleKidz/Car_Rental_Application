@@ -3,7 +3,7 @@ import ProviderDetailClient from "./ProviderDetailClient";
 const BACKEND = process.env.BACKEND_URL || "http://localhost:5000";
 
 async function fetchJSON(path: string) {
-  const res = await fetch(`${BACKEND}${path}`, { next: { revalidate: 60 } });
+  const res = await fetch(`${BACKEND}${path}`, { cache: "no-store" });
   return res.ok ? res.json() : null;
 }
 
