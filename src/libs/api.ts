@@ -13,7 +13,9 @@ async function fetchJSON<T>(path: string, options?: RequestInit): Promise<T> {
 }
 
 export function getProviders() {
-  return fetchJSON<{ success: boolean; count: number; data: import("@/types").Provider[] }>("/api/providers");
+  return fetchJSON<{ success: boolean; count: number; data: import("@/types").Provider[] }>("/api/providers", {
+    next: { revalidate: 60 },
+  });
 }
 
 export function getProvider(id: string) {

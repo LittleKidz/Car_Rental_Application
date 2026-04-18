@@ -1,6 +1,7 @@
 "use client";
 
 import { useEffect, useState } from "react";
+import Image from "next/image";
 import type {
   Rental,
   Provider,
@@ -136,7 +137,7 @@ export default function RentalsTab({ token }: { token: string }) {
                 <div className="flex flex-col sm:flex-row">
                   {car?.image && (
                     <div className="sm:w-48 h-32 sm:h-auto shrink-0 bg-slate-100">
-                      <img
+                      <Image
                         src={car.image}
                         alt={`${car.brand} ${car.model}`}
                         className="w-full h-full object-cover"

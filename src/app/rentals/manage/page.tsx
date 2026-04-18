@@ -1,5 +1,6 @@
 "use client";
 
+import Image from "next/image";
 import { useSession } from "next-auth/react";
 import { useSelector, useDispatch } from "react-redux";
 import { RootState, AppDispatch } from "@/redux/store";
@@ -106,7 +107,7 @@ export default function ManageRentalsPage() {
                 <div key={idx} className="card overflow-hidden">
                   <div className="flex items-center">
                     <div className="w-36 h-28 shrink-0 bg-slate-100">
-                      <img
+                      <Image
                         src={item.car.image || "https://images.unsplash.com/photo-1494976388531-d1058494cdd8?w=800&q=80"}
                         alt={`${item.car.brand} ${item.car.model}`}
                         className="w-full h-full object-cover"
