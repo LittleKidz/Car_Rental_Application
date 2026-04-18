@@ -30,6 +30,9 @@ export interface Car {
   id: string;
 }
 
+export type PaymentStatus = "pending" | "paid" | "refunded";
+export type RefundStatus = "none" | "requested" | "completed";
+
 export interface Rental {
   _id: string;
   rentalDate: string;
@@ -38,6 +41,21 @@ export interface Rental {
   provider: Provider | string;
   car?: Car | string;
   createAt: string;
+  // Payment fields
+  totalAmount: number;
+  paymentStatus: PaymentStatus;
+  refundStatus: RefundStatus;
+  paidAt?: string;
+  cancelledAt?: string;
+}
+
+export interface Notification {
+  _id: string;
+  user: string;
+  rental?: string;
+  message: string;
+  read: boolean;
+  createdAt: string;
 }
 
 export interface ApiResponse<T> {

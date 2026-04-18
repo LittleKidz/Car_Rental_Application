@@ -5,6 +5,7 @@ import { useSession, signOut } from "next-auth/react";
 import { useSelector } from "react-redux";
 import { RootState } from "@/redux/store";
 import { useState } from "react";
+import NotificationBell from "@/components/ui/NotificationBell";
 
 export default function TopMenu() {
   const { data: session } = useSession();
@@ -35,18 +36,8 @@ export default function TopMenu() {
               href="/rentals/manage"
               className="relative flex items-center gap-1.5 px-3 py-2 rounded-lg text-sm font-medium text-slate-600 hover:bg-slate-100 hover:text-slate-900 transition-colors"
             >
-              <svg
-                className="w-4 h-4"
-                fill="none"
-                viewBox="0 0 24 24"
-                stroke="currentColor"
-                strokeWidth={2}
-              >
-                <path
-                  strokeLinecap="round"
-                  strokeLinejoin="round"
-                  d="M3 3h2l.4 2M7 13h10l4-8H5.4M7 13L5.4 5M7 13l-2.293 2.293c-.63.63-.184 1.707.707 1.707H17m0 0a2 2 0 100 4 2 2 0 000-4zm-8 2a2 2 0 100 4 2 2 0 000-4z"
-                />
+              <svg className="w-4 h-4" fill="none" viewBox="0 0 24 24" stroke="currentColor" strokeWidth={2}>
+                <path strokeLinecap="round" strokeLinejoin="round" d="M3 3h2l.4 2M7 13h10l4-8H5.4M7 13L5.4 5M7 13l-2.293 2.293c-.63.63-.184 1.707.707 1.707H17m0 0a2 2 0 100 4 2 2 0 000-4zm-8 2a2 2 0 100 4 2 2 0 000-4z" />
               </svg>
               Cart
               {cartItems.length > 0 && (
@@ -61,10 +52,11 @@ export default function TopMenu() {
           )}
         </nav>
 
-        {/* Auth */}
-        <div className="hidden md:flex items-center gap-3">
+        {/* Auth + Notifications */}
+        <div className="hidden md:flex items-center gap-2">
+          {session && <NotificationBell />}
           {session ? (
-            <div className="flex items-center gap-3">
+            <div className="flex items-center gap-2">
               <div className="flex items-center gap-2 px-3 py-1.5 rounded-full bg-slate-100 text-sm">
                 <div className="w-6 h-6 rounded-full bg-indigo-100 text-indigo-600 flex items-center justify-center text-xs font-bold">
                   {session.user.name?.charAt(0).toUpperCase()}
@@ -83,33 +75,17 @@ export default function TopMenu() {
                 className="p-2 rounded-lg text-slate-400 hover:text-red-500 hover:bg-red-50 transition-colors"
                 title="Sign out"
               >
-                <svg
-                  className="w-[18px] h-[18px]"
-                  fill="none"
-                  viewBox="0 0 24 24"
-                  stroke="currentColor"
-                  strokeWidth={2}
-                >
-                  <path
-                    strokeLinecap="round"
-                    strokeLinejoin="round"
-                    d="M17 16l4-4m0 0l-4-4m4 4H7m6 4v1a3 3 0 01-3 3H6a3 3 0 01-3-3V7a3 3 0 013-3h4a3 3 0 013 3v1"
-                  />
+                <svg className="w-[18px] h-[18px]" fill="none" viewBox="0 0 24 24" stroke="currentColor" strokeWidth={2}>
+                  <path strokeLinecap="round" strokeLinejoin="round" d="M17 16l4-4m0 0l-4-4m4 4H7m6 4v1a3 3 0 01-3 3H6a3 3 0 01-3-3V7a3 3 0 013-3h4a3 3 0 013 3v1" />
                 </svg>
               </button>
             </div>
           ) : (
             <div className="flex items-center gap-2">
-              <Link
-                href="/login"
-                className="px-4 py-2 text-sm font-medium text-slate-700 hover:text-slate-900 transition-colors"
-              >
+              <Link href="/login" className="px-4 py-2 text-sm font-medium text-slate-700 hover:text-slate-900 transition-colors">
                 Sign in
               </Link>
-              <Link
-                href="/register"
-                className="px-4 py-2 text-sm font-semibold bg-indigo-600 text-white rounded-lg hover:bg-indigo-700 transition-colors shadow-sm shadow-indigo-500/20"
-              >
+              <Link href="/register" className="px-4 py-2 text-sm font-semibold bg-indigo-600 text-white rounded-lg hover:bg-indigo-700 transition-colors shadow-sm shadow-indigo-500/20">
                 Register
               </Link>
             </div>
@@ -122,32 +98,12 @@ export default function TopMenu() {
           onClick={() => setMobileOpen(!mobileOpen)}
         >
           {mobileOpen ? (
-            <svg
-              className="w-5 h-5"
-              fill="none"
-              viewBox="0 0 24 24"
-              stroke="currentColor"
-              strokeWidth={2}
-            >
-              <path
-                strokeLinecap="round"
-                strokeLinejoin="round"
-                d="M6 18L18 6M6 6l12 12"
-              />
+            <svg className="w-5 h-5" fill="none" viewBox="0 0 24 24" stroke="currentColor" strokeWidth={2}>
+              <path strokeLinecap="round" strokeLinejoin="round" d="M6 18L18 6M6 6l12 12" />
             </svg>
           ) : (
-            <svg
-              className="w-5 h-5"
-              fill="none"
-              viewBox="0 0 24 24"
-              stroke="currentColor"
-              strokeWidth={2}
-            >
-              <path
-                strokeLinecap="round"
-                strokeLinejoin="round"
-                d="M4 6h16M4 12h16M4 18h16"
-              />
+            <svg className="w-5 h-5" fill="none" viewBox="0 0 24 24" stroke="currentColor" strokeWidth={2}>
+              <path strokeLinecap="round" strokeLinejoin="round" d="M4 6h16M4 12h16M4 18h16" />
             </svg>
           )}
         </button>
@@ -156,46 +112,30 @@ export default function TopMenu() {
       {/* Mobile menu */}
       {mobileOpen && (
         <div className="md:hidden border-t border-slate-100 bg-white px-4 py-3 space-y-1">
-          <MobileLink href="/providers" onClick={() => setMobileOpen(false)}>
-            Providers
-          </MobileLink>
+          <MobileLink href="/providers" onClick={() => setMobileOpen(false)}>Providers</MobileLink>
           {session && session.user.role !== "admin" && (
-            <MobileLink href="/rentals" onClick={() => setMobileOpen(false)}>
-              My Rentals
-            </MobileLink>
+            <MobileLink href="/rentals" onClick={() => setMobileOpen(false)}>My Rentals</MobileLink>
           )}
           {session && session.user.role !== "admin" && (
-            <MobileLink
-              href="/rentals/manage"
-              onClick={() => setMobileOpen(false)}
-            >
+            <MobileLink href="/rentals/manage" onClick={() => setMobileOpen(false)}>
               Cart ({cartItems.length})
             </MobileLink>
           )}
           {session?.user.role === "admin" && (
-            <MobileLink href="/admin" onClick={() => setMobileOpen(false)}>
-              Admin Panel
-            </MobileLink>
+            <MobileLink href="/admin" onClick={() => setMobileOpen(false)}>Admin Panel</MobileLink>
           )}
           <hr className="my-2 border-slate-100" />
           {session ? (
             <button
-              onClick={() => {
-                setMobileOpen(false);
-                signOut({ callbackUrl: "/" });
-              }}
+              onClick={() => { setMobileOpen(false); signOut({ callbackUrl: "/" }); }}
               className="w-full text-left px-3 py-2 rounded-lg text-sm font-medium text-red-600 hover:bg-red-50"
             >
               Sign out
             </button>
           ) : (
             <>
-              <MobileLink href="/login" onClick={() => setMobileOpen(false)}>
-                Sign in
-              </MobileLink>
-              <MobileLink href="/register" onClick={() => setMobileOpen(false)}>
-                Register
-              </MobileLink>
+              <MobileLink href="/login" onClick={() => setMobileOpen(false)}>Sign in</MobileLink>
+              <MobileLink href="/register" onClick={() => setMobileOpen(false)}>Register</MobileLink>
             </>
           )}
         </div>
@@ -204,38 +144,17 @@ export default function TopMenu() {
   );
 }
 
-function NavLink({
-  href,
-  children,
-}: {
-  href: string;
-  children: React.ReactNode;
-}) {
+function NavLink({ href, children }: { href: string; children: React.ReactNode }) {
   return (
-    <Link
-      href={href}
-      className="px-3 py-2 rounded-lg text-sm font-medium text-slate-600 hover:bg-slate-100 hover:text-slate-900 transition-colors"
-    >
+    <Link href={href} className="px-3 py-2 rounded-lg text-sm font-medium text-slate-600 hover:bg-slate-100 hover:text-slate-900 transition-colors">
       {children}
     </Link>
   );
 }
 
-function MobileLink({
-  href,
-  children,
-  onClick,
-}: {
-  href: string;
-  children: React.ReactNode;
-  onClick: () => void;
-}) {
+function MobileLink({ href, children, onClick }: { href: string; children: React.ReactNode; onClick: () => void }) {
   return (
-    <Link
-      href={href}
-      onClick={onClick}
-      className="block px-3 py-2 rounded-lg text-sm font-medium text-slate-700 hover:bg-slate-100"
-    >
+    <Link href={href} onClick={onClick} className="block px-3 py-2 rounded-lg text-sm font-medium text-slate-700 hover:bg-slate-100">
       {children}
     </Link>
   );

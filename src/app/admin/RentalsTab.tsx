@@ -1,12 +1,22 @@
 "use client";
 
 import { useEffect, useState } from "react";
-import type { Rental, Provider, Car, User } from "@/types";
+import type {
+  Rental,
+  Provider,
+  Car,
+  User,
+  PaymentStatus,
+  RefundStatus,
+} from "@/types";
+
 import { useToast, Toast } from "@/components/ui/Toast";
 import Loading from "@/components/ui/Loading";
 import DateRangeDisplay from "@/components/ui/DateRangeDisplay";
 import DateRangePicker from "@/components/ui/DateRangePicker";
 import { toInputDate } from "@/libs/utils";
+
+const PAYMENT_STATUS_OPTIONS: PaymentStatus[] = ["pending", "paid", "refunded"];
 
 export default function RentalsTab({ token }: { token: string }) {
   const [rentals, setRentals] = useState<Rental[]>([]);
@@ -14,6 +24,7 @@ export default function RentalsTab({ token }: { token: string }) {
   const [editId, setEditId] = useState<string | null>(null);
   const [editPickup, setEditPickup] = useState("");
   const [editReturn, setEditReturn] = useState("");
+  const [updatingPayment, setUpdatingPayment] = useState<string | null>(null);
   const [toast, showToast] = useToast();
 
   const load = async () => {
@@ -24,24 +35,80 @@ export default function RentalsTab({ token }: { token: string }) {
     setLoading(false);
   };
 
-  useEffect(() => { load(); }, []);
+  useEffect(() => {
+    load();
+  }, []);
+
+  const handleRefundStatus = async (id: string, refundStatus: RefundStatus) => {
+    setUpdatingPayment(id);
+    const res = await fetch(`/api/rentals/${id}/payment-status`, {
+      method: "PATCH",
+      headers: {
+        "Content-Type": "application/json",
+        Authorization: `Bearer ${token}`,
+      },
+      body: JSON.stringify({ refundStatus }),
+    }).then((r) => r.json());
+
+    if (res.success) {
+      const res = await fetch(`/api/rentals/${id}`, {
+        method: "DELETE",
+        headers: { Authorization: `Bearer ${token}` },
+      }).then((r) => r.json());
+      showToast(`Refund status updated to ${refundStatus}`);
+      load();
+    } else showToast(res.message || "Failed to update");
+    setUpdatingPayment(null);
+  };
 
   const handleDelete = async (id: string) => {
     if (!confirm("Delete this rental?")) return;
     const res = await fetch(`/api/rentals/${id}`, {
-      method: "DELETE", headers: { Authorization: `Bearer ${token}` },
+      method: "DELETE",
+      headers: { Authorization: `Bearer ${token}` },
     }).then((r) => r.json());
-    if (res.success) { showToast("Deleted!"); load(); }
+    if (res.success) {
+      showToast("Deleted!");
+      load();
+    }
   };
 
   const handleUpdate = async (id: string) => {
     const res = await fetch(`/api/rentals/${id}`, {
       method: "PUT",
-      headers: { "Content-Type": "application/json", Authorization: `Bearer ${token}` },
+      headers: {
+        "Content-Type": "application/json",
+        Authorization: `Bearer ${token}`,
+      },
       body: JSON.stringify({ rentalDate: editPickup, returnDate: editReturn }),
     }).then((r) => r.json());
-    if (res.success) { showToast("Updated!"); setEditId(null); load(); }
-    else showToast(res.message || "Failed to update");
+
+    if (res.success) {
+      showToast("Updated!");
+      setEditId(null);
+      load();
+    } else showToast(res.message || "Failed to update");
+  };
+
+  const handlePaymentStatus = async (
+    id: string,
+    paymentStatus: PaymentStatus,
+  ) => {
+    setUpdatingPayment(id);
+    const res = await fetch(`/api/rentals/${id}/payment-status`, {
+      method: "PATCH",
+      headers: {
+        "Content-Type": "application/json",
+        Authorization: `Bearer ${token}`,
+      },
+      body: JSON.stringify({ paymentStatus }),
+    }).then((r) => r.json());
+
+    if (res.success) {
+      showToast(`Status updated to ${paymentStatus}`);
+      load();
+    } else showToast(res.message || "Failed to update status");
+    setUpdatingPayment(null);
   };
 
   if (loading) return <Loading />;
@@ -49,10 +116,14 @@ export default function RentalsTab({ token }: { token: string }) {
   return (
     <div>
       <Toast message={toast} />
-      <h2 className="text-lg font-semibold text-slate-800 mb-6">All Rentals ({rentals.length})</h2>
+      <h2 className="text-lg font-semibold text-slate-800 mb-6">
+        All Rentals ({rentals.length})
+      </h2>
 
       {rentals.length === 0 ? (
-        <div className="text-center py-16 text-slate-400">No rentals found.</div>
+        <div className="text-center py-16 text-slate-400">
+          No rentals found.
+        </div>
       ) : (
         <div className="space-y-4 stagger-children">
           {rentals.map((r) => {
@@ -65,37 +136,129 @@ export default function RentalsTab({ token }: { token: string }) {
                 <div className="flex flex-col sm:flex-row">
                   {car?.image && (
                     <div className="sm:w-48 h-32 sm:h-auto shrink-0 bg-slate-100">
-                      <img src={car.image} alt={`${car.brand} ${car.model}`} className="w-full h-full object-cover" />
+                      <img
+                        src={car.image}
+                        alt={`${car.brand} ${car.model}`}
+                        className="w-full h-full object-cover"
+                      />
                     </div>
                   )}
-                  <div className="flex-1 p-5 sm:p-6 flex flex-col sm:flex-row sm:items-center gap-4">
+                  <div className="flex-1 p-5 sm:p-6 flex flex-col sm:flex-row sm:items-start gap-4">
                     <div className="flex-1 min-w-0">
-                      <div className="flex items-center gap-2 flex-wrap">
-                        <h3 className="font-semibold text-slate-900">{car ? `${car.brand} ${car.model}` : "Car"}</h3>
-                        {car && <span className="text-xs text-slate-400">{car.licensePlate}</span>}
+                      <div className="flex items-center gap-2 flex-wrap mb-0.5">
+                        <h3 className="font-semibold text-slate-900">
+                          {car ? `${car.brand} ${car.model}` : "Car"}
+                        </h3>
+                        {car && (
+                          <span className="text-xs text-slate-400">
+                            {car.licensePlate}
+                          </span>
+                        )}
                       </div>
-                      <p className="text-sm text-slate-500">{user?.name} ({user?.email})</p>
-                      <p className="text-sm text-slate-500 mt-1">Provider: {prov?.name || "Unknown"}</p>
+                      <p className="text-sm text-slate-500">
+                        {user?.name} ({user?.email})
+                      </p>
+                      <p className="text-sm text-slate-500 mt-0.5">
+                        Provider: {prov?.name || "Unknown"}
+                      </p>
+
+                      {/* Payment status selector */}
+                      <div className="flex items-center gap-2 mt-2">
+                        <span className="text-xs text-slate-400">Payment:</span>
+                        <select
+                          value={r.paymentStatus}
+                          disabled={updatingPayment === r._id}
+                          onChange={(e) =>
+                            handlePaymentStatus(
+                              r._id,
+                              e.target.value as PaymentStatus,
+                            )
+                          }
+                          className="text-xs border border-slate-200 rounded-lg px-2 py-1 bg-white text-slate-700 focus:outline-none focus:ring-2 focus:ring-indigo-500 disabled:opacity-50"
+                        >
+                          {PAYMENT_STATUS_OPTIONS.map((s) => (
+                            <option key={s} value={s}>
+                              {s}
+                            </option>
+                          ))}
+                        </select>
+                        {r.totalAmount > 0 && (
+                          <span className="text-xs font-medium text-slate-600">
+                            ฿{r.totalAmount.toLocaleString()}
+                          </span>
+                        )}
+                      </div>
+
+                      {r.refundStatus !== "none" && (
+                        <select
+                          value={r.refundStatus}
+                          disabled={updatingPayment === r._id}
+                          onChange={(e) =>
+                            handleRefundStatus(
+                              r._id,
+                              e.target.value as RefundStatus,
+                            )
+                          }
+                          className="text-xs border border-slate-200 rounded-lg px-2 py-1 bg-white text-slate-700 focus:outline-none focus:ring-2 focus:ring-indigo-500 disabled:opacity-50"
+                        >
+                          <option value="requested">Refund: requested</option>
+                          <option value="completed">Refund: completed</option>
+                        </select>
+                      )}
 
                       {editId === r._id ? (
                         <div className="flex flex-wrap items-center gap-2 mt-3">
-                          <DateRangePicker compact pickup={editPickup} returnDate={editReturn} onPickupChange={setEditPickup} onReturnChange={setEditReturn} />
+                          <DateRangePicker
+                            compact
+                            pickup={editPickup}
+                            returnDate={editReturn}
+                            onPickupChange={setEditPickup}
+                            onReturnChange={setEditReturn}
+                          />
                           <div className="flex gap-2 mt-4">
-                            <button onClick={() => handleUpdate(r._id)} className="btn-primary text-xs px-3 py-1.5">Save</button>
-                            <button onClick={() => setEditId(null)} className="btn-secondary text-xs px-3 py-1.5">Cancel</button>
+                            <button
+                              onClick={() => handleUpdate(r._id)}
+                              className="btn-primary text-xs px-3 py-1.5"
+                            >
+                              Save
+                            </button>
+                            <button
+                              onClick={() => setEditId(null)}
+                              className="btn-secondary text-xs px-3 py-1.5"
+                            >
+                              Cancel
+                            </button>
                           </div>
                         </div>
                       ) : (
                         <div className="mt-2">
-                          <DateRangeDisplay pickup={r.rentalDate} returnDate={r.returnDate} dailyRate={car?.dailyRate} />
+                          <DateRangeDisplay
+                            pickup={r.rentalDate}
+                            returnDate={r.returnDate}
+                            dailyRate={car?.dailyRate}
+                          />
                         </div>
                       )}
                     </div>
 
                     {editId !== r._id && (
                       <div className="flex items-center gap-2 shrink-0">
-                        <button onClick={() => { setEditId(r._id); setEditPickup(toInputDate(r.rentalDate)); setEditReturn(toInputDate(r.returnDate)); }} className="btn-secondary text-xs px-3 py-2">Edit</button>
-                        <button onClick={() => handleDelete(r._id)} className="btn-danger text-xs px-3 py-2">Delete</button>
+                        <button
+                          onClick={() => {
+                            setEditId(r._id);
+                            setEditPickup(toInputDate(r.rentalDate));
+                            setEditReturn(toInputDate(r.returnDate));
+                          }}
+                          className="btn-secondary text-xs px-3 py-2"
+                        >
+                          Edit
+                        </button>
+                        <button
+                          onClick={() => handleDelete(r._id)}
+                          className="btn-danger text-xs px-3 py-2"
+                        >
+                          Delete
+                        </button>
                       </div>
                     )}
                   </div>

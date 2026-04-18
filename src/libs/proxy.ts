@@ -49,7 +49,12 @@ export async function proxy(
 
     // Attach body for methods that need it
     if (req && ["POST", "PUT", "PATCH"].includes(httpMethod)) {
-      init.body = JSON.stringify(await req.json());
+      try {
+        const body = await req.json();
+        init.body = JSON.stringify(body);
+      } catch {
+        // no body — skip
+      }
     }
 
     const res = await fetch(`${BACKEND}${path}`, init);

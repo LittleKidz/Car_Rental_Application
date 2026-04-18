@@ -41,19 +41,21 @@ export default function ManageRentalsPage() {
           }),
         }).then((r) => r.json());
 
-        res.push(r.success
-          ? { ok: true, msg: `${item.car.brand} ${item.car.model} — Booked!` }
-          : { ok: false, msg: `${item.car.brand} ${item.car.model} — ${r.message || "Failed"}` }
+        res.push(
+          r.success
+            ? { ok: true, msg: `${item.car.brand} ${item.car.model} — Booked!` }
+            : { ok: false, msg: `${item.car.brand} ${item.car.model} — ${r.message || "Failed"}` }
         );
       } catch {
-        res.push({ ok: false, msg: `${item.car.brand} ${item.car.model} — Error` });
+        res.push({ ok: false, msg: `${item.car.brand} ${item.car.model} — Network error` });
       }
     }
 
     setResults(res);
+
     if (res.every((r) => r.ok)) {
       dispatch(clearCart());
-      showToast("All bookings confirmed!");
+      showToast("Bookings confirmed! Proceed to payment.");
       setTimeout(() => router.push("/rentals"), 1500);
     } else {
       showToast("Some bookings failed. Check details below.");
@@ -88,6 +90,11 @@ export default function ManageRentalsPage() {
                   {r.ok ? "✓" : "✗"} {r.msg}
                 </div>
               ))}
+              {results.every((r) => r.ok) && (
+                <div className="mt-4 px-4 py-3 bg-indigo-50 border border-indigo-200 rounded-xl text-sm text-indigo-700">
+                  All bookings confirmed! Go to <button onClick={() => router.push("/rentals")} className="underline font-medium">My Rentals</button> to complete payment.
+                </div>
+              )}
             </div>
           )}
 
@@ -99,7 +106,11 @@ export default function ManageRentalsPage() {
                 <div key={idx} className="card overflow-hidden">
                   <div className="flex items-center">
                     <div className="w-36 h-28 shrink-0 bg-slate-100">
-                      <img src={item.car.image || "https://images.unsplash.com/photo-1494976388531-d1058494cdd8?w=800&q=80"} alt={`${item.car.brand} ${item.car.model}`} className="w-full h-full object-cover" />
+                      <img
+                        src={item.car.image || "https://images.unsplash.com/photo-1494976388531-d1058494cdd8?w=800&q=80"}
+                        alt={`${item.car.brand} ${item.car.model}`}
+                        className="w-full h-full object-cover"
+                      />
                     </div>
                     <div className="flex-1 min-w-0 px-4 py-3">
                       <h3 className="font-semibold text-slate-900">{item.car.brand} {item.car.model}</h3>
@@ -112,7 +123,11 @@ export default function ManageRentalsPage() {
                       </div>
                       <p className="text-sm font-bold text-slate-700 mt-1">฿{(item.car.dailyRate * days).toLocaleString()}</p>
                     </div>
-                    <button onClick={() => dispatch(removeFromCart(idx))} className="p-3 text-slate-400 hover:text-red-500 hover:bg-red-50 transition-colors shrink-0" title="Remove">
+                    <button
+                      onClick={() => dispatch(removeFromCart(idx))}
+                      className="p-3 text-slate-400 hover:text-red-500 hover:bg-red-50 transition-colors shrink-0"
+                      title="Remove"
+                    >
                       <svg className="w-5 h-5" fill="none" viewBox="0 0 24 24" stroke="currentColor" strokeWidth={2}>
                         <path strokeLinecap="round" strokeLinejoin="round" d="M19 7l-.867 12.142A2 2 0 0116.138 21H7.862a2 2 0 01-1.995-1.858L5 7m5 4v6m4-6v6m1-10V4a1 1 0 00-1-1h-4a1 1 0 00-1 1v3M4 7h16" />
                       </svg>
@@ -127,13 +142,18 @@ export default function ManageRentalsPage() {
           {cartItems.length > 0 && (
             <div className="mt-8 card p-6 animate-fade-in-up">
               <div className="flex items-center justify-between mb-4">
-                <span className="text-slate-600 font-medium">Total: {cartItems.length} rental{cartItems.length > 1 ? "s" : ""}</span>
+                <span className="text-slate-600 font-medium">
+                  Total: {cartItems.length} rental{cartItems.length > 1 ? "s" : ""}
+                </span>
                 <span className="text-xl font-bold text-slate-900">฿{totalCost.toLocaleString()}</span>
               </div>
+              <p className="text-xs text-slate-400 mb-4">
+                Payment will be processed separately for each booking via QR code.
+              </p>
               <div className="flex gap-3">
                 <button onClick={() => dispatch(clearCart())} className="btn-secondary flex-1">Clear Cart</button>
                 <button onClick={handleSubmitAll} disabled={submitting} className="btn-primary flex-1">
-                  {submitting ? "Booking..." : "Confirm All Bookings"}
+                  {submitting ? "Booking…" : "Confirm All Bookings"}
                 </button>
               </div>
             </div>
