@@ -44,7 +44,9 @@ export async function proxy(
     const init: RequestInit = {
       method: httpMethod,
       headers,
-      cache: "no-store",
+      ...(httpMethod === "GET" && !auth
+        ? { next: { revalidate: 30 } }
+        : { cache: "no-store" }),
     };
 
     // Attach body for methods that need it

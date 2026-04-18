@@ -9,6 +9,7 @@ import { useToast, Toast } from "@/components/ui/Toast";
 import Loading from "@/components/ui/Loading";
 import DateRangeDisplay from "@/components/ui/DateRangeDisplay";
 import DateRangePicker from "@/components/ui/DateRangePicker";
+import ConfirmDialog from "@/components/ui/ConfirmDialog";
 
 const PAYMENT_STATUS_STYLES: Record<string, string> = {
   pending: "bg-amber-50 text-amber-700 border-amber-200",
@@ -31,6 +32,15 @@ export default function RentalsPage() {
   const [editPickup, setEditPickup] = useState("");
   const [editReturn, setEditReturn] = useState("");
   const [cancelling, setCancelling] = useState<string | null>(null);
+  const [dialog, setDialog] = useState<{
+    open: boolean;
+    title: string;
+    message: string;
+    variant?: "danger" | "primary";
+    onConfirm: () => void;
+  }>({ open: false, title: "", message: "", onConfirm: () => {} });
+
+  const closeDialog = () => setDialog((d) => ({ ...d, open: false }));
   const [toast, showToast] = useToast();
 
   const token = session?.user.token ?? "";
@@ -54,15 +64,23 @@ export default function RentalsPage() {
   }, [status, token]);
 
   const handleDelete = async (id: string) => {
-    if (!confirm("Are you sure you want to delete this rental?")) return;
-    const res = await fetch(`/api/rentals/${id}`, {
-      method: "DELETE",
-      headers: { Authorization: `Bearer ${token}` },
-    }).then((r) => r.json());
-    if (res.success) {
-      showToast("Rental deleted");
-      fetchRentals();
-    }
+    setDialog({
+      open: true,
+      title: "Delete Rental",
+      message: "Are you sure you want to delete this rental?",
+      variant: "danger",
+      onConfirm: async () => {
+        closeDialog();
+        const res = await fetch(`/api/rentals/${id}`, {
+          method: "DELETE",
+          headers: { Authorization: `Bearer ${token}` },
+        }).then((r) => r.json());
+        if (res.success) {
+          showToast("Rental deleted");
+          fetchRentals();
+        }
+      },
+    });
   };
 
   const handleUpdate = async (id: string) => {
@@ -89,20 +107,26 @@ export default function RentalsPage() {
   };
 
   const handleCancel = async (id: string) => {
-    if (!confirm("Cancel this booking and request a refund?")) return;
-    setCancelling(id);
-    const res = await fetch(`/api/rentals/${id}/cancel`, {
-      method: "POST",
-      headers: { Authorization: `Bearer ${token}` },
-    }).then((r) => r.json());
-
-    if (res.success) {
-      showToast("Booking cancelled. Refund will be processed shortly.");
-      fetchRentals();
-    } else {
-      showToast(res.message || "Cannot cancel this booking");
-    }
-    setCancelling(null);
+    setDialog({
+      open: true,
+      title: "Cancel Booking",
+      message:
+        "Cancel this booking and request a refund? Only bookings at least 3 days before pickup can be cancelled.",
+      variant: "danger",
+      onConfirm: async () => {
+        closeDialog();
+        setCancelling(id);
+        const res = await fetch(`/api/rentals/${id}/cancel`, {
+          method: "POST",
+          headers: { Authorization: `Bearer ${token}` },
+        }).then((r) => r.json());
+        if (res.success) {
+          showToast("Booking cancelled.");
+          fetchRentals();
+        } else showToast(res.message || "Cannot cancel");
+        setCancelling(null);
+      },
+    });
   };
 
   if (loading) return <Loading />;
@@ -286,6 +310,7 @@ export default function RentalsPage() {
           })}
         </div>
       )}
+      <ConfirmDialog {...dialog} onCancel={closeDialog} />
     </div>
   );
 }

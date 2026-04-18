@@ -9,11 +9,11 @@ import type {
   PaymentStatus,
   RefundStatus,
 } from "@/types";
-
 import { useToast, Toast } from "@/components/ui/Toast";
 import Loading from "@/components/ui/Loading";
 import DateRangeDisplay from "@/components/ui/DateRangeDisplay";
 import DateRangePicker from "@/components/ui/DateRangePicker";
+import ConfirmDialog from "@/components/ui/ConfirmDialog";
 import { toInputDate } from "@/libs/utils";
 
 const PAYMENT_STATUS_OPTIONS: PaymentStatus[] = ["pending", "paid", "refunded"];
@@ -25,7 +25,16 @@ export default function RentalsTab({ token }: { token: string }) {
   const [editPickup, setEditPickup] = useState("");
   const [editReturn, setEditReturn] = useState("");
   const [updatingPayment, setUpdatingPayment] = useState<string | null>(null);
+  const [dialog, setDialog] = useState<{
+    open: boolean;
+    title: string;
+    message: string;
+    variant?: "danger" | "primary";
+    onConfirm: () => void;
+  }>({ open: false, title: "", message: "", onConfirm: () => {} });
   const [toast, showToast] = useToast();
+
+  const closeDialog = () => setDialog((d) => ({ ...d, open: false }));
 
   const load = async () => {
     const res = await fetch("/api/rentals", {
@@ -39,38 +48,24 @@ export default function RentalsTab({ token }: { token: string }) {
     load();
   }, []);
 
-  const handleRefundStatus = async (id: string, refundStatus: RefundStatus) => {
-    setUpdatingPayment(id);
-    const res = await fetch(`/api/rentals/${id}/payment-status`, {
-      method: "PATCH",
-      headers: {
-        "Content-Type": "application/json",
-        Authorization: `Bearer ${token}`,
-      },
-      body: JSON.stringify({ refundStatus }),
-    }).then((r) => r.json());
-
-    if (res.success) {
-      const res = await fetch(`/api/rentals/${id}`, {
-        method: "DELETE",
-        headers: { Authorization: `Bearer ${token}` },
-      }).then((r) => r.json());
-      showToast(`Refund status updated to ${refundStatus}`);
-      load();
-    } else showToast(res.message || "Failed to update");
-    setUpdatingPayment(null);
-  };
-
   const handleDelete = async (id: string) => {
-    if (!confirm("Delete this rental?")) return;
-    const res = await fetch(`/api/rentals/${id}`, {
-      method: "DELETE",
-      headers: { Authorization: `Bearer ${token}` },
-    }).then((r) => r.json());
-    if (res.success) {
-      showToast("Deleted!");
-      load();
-    }
+    setDialog({
+      open: true,
+      title: "Delete Rental",
+      message: "Delete this rental permanently?",
+      variant: "danger",
+      onConfirm: async () => {
+        closeDialog();
+        const res = await fetch(`/api/rentals/${id}`, {
+          method: "DELETE",
+          headers: { Authorization: `Bearer ${token}` },
+        }).then((r) => r.json());
+        if (res.success) {
+          showToast("Deleted!");
+          load();
+        }
+      },
+    });
   };
 
   const handleUpdate = async (id: string) => {
@@ -108,6 +103,37 @@ export default function RentalsTab({ token }: { token: string }) {
       showToast(`Status updated to ${paymentStatus}`);
       load();
     } else showToast(res.message || "Failed to update status");
+    setUpdatingPayment(null);
+  };
+
+  const handleRefundStatus = async (id: string, refundStatus: RefundStatus) => {
+    setUpdatingPayment(id);
+
+    const res = await fetch(`/api/rentals/${id}/payment-status`, {
+      method: "PATCH",
+      headers: {
+        "Content-Type": "application/json",
+        Authorization: `Bearer ${token}`,
+      },
+      body: JSON.stringify({ refundStatus }),
+    }).then((r) => r.json());
+
+    if (res.success) {
+      if (refundStatus === "completed") {
+        // ลบ rental ออกหลัง refund สำเร็จ
+        await fetch(`/api/rentals/${id}`, {
+          method: "DELETE",
+          headers: { Authorization: `Bearer ${token}` },
+        });
+        showToast("Refund completed. Rental removed.");
+      } else {
+        showToast(`Refund status updated to ${refundStatus}`);
+      }
+      load();
+    } else {
+      showToast(res.message || "Failed to update");
+    }
+
     setUpdatingPayment(null);
   };
 
@@ -162,8 +188,7 @@ export default function RentalsTab({ token }: { token: string }) {
                         Provider: {prov?.name || "Unknown"}
                       </p>
 
-                      {/* Payment status selector */}
-                      <div className="flex items-center gap-2 mt-2">
+                      <div className="flex items-center gap-2 mt-2 flex-wrap">
                         <span className="text-xs text-slate-400">Payment:</span>
                         <select
                           value={r.paymentStatus}
@@ -187,24 +212,23 @@ export default function RentalsTab({ token }: { token: string }) {
                             ฿{r.totalAmount.toLocaleString()}
                           </span>
                         )}
+                        {r.refundStatus !== "none" && (
+                          <select
+                            value={r.refundStatus}
+                            disabled={updatingPayment === r._id}
+                            onChange={(e) =>
+                              handleRefundStatus(
+                                r._id,
+                                e.target.value as RefundStatus,
+                              )
+                            }
+                            className="text-xs border border-slate-200 rounded-lg px-2 py-1 bg-white text-slate-700 focus:outline-none focus:ring-2 focus:ring-indigo-500 disabled:opacity-50"
+                          >
+                            <option value="requested">Refund: requested</option>
+                            <option value="completed">Refund: completed</option>
+                          </select>
+                        )}
                       </div>
-
-                      {r.refundStatus !== "none" && (
-                        <select
-                          value={r.refundStatus}
-                          disabled={updatingPayment === r._id}
-                          onChange={(e) =>
-                            handleRefundStatus(
-                              r._id,
-                              e.target.value as RefundStatus,
-                            )
-                          }
-                          className="text-xs border border-slate-200 rounded-lg px-2 py-1 bg-white text-slate-700 focus:outline-none focus:ring-2 focus:ring-indigo-500 disabled:opacity-50"
-                        >
-                          <option value="requested">Refund: requested</option>
-                          <option value="completed">Refund: completed</option>
-                        </select>
-                      )}
 
                       {editId === r._id ? (
                         <div className="flex flex-wrap items-center gap-2 mt-3">
@@ -268,6 +292,7 @@ export default function RentalsTab({ token }: { token: string }) {
           })}
         </div>
       )}
+      <ConfirmDialog {...dialog} onCancel={closeDialog} />
     </div>
   );
 }
