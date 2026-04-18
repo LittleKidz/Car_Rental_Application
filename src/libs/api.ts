@@ -6,8 +6,13 @@
 
 const API = process.env.BACKEND_URL || "http://localhost:5000";
 
-async function fetchJSON<T>(path: string, options?: RequestInit): Promise<T> {
-  const res = await fetch(`${API}${path}`, { cache: "no-cache", ...options });
+type FetchOptions = RequestInit & { next?: { revalidate?: number } };
+
+async function fetchJSON<T>(path: string, options?: FetchOptions): Promise<T> {
+  const fetchOptions: FetchOptions = options?.next
+    ? options
+    : { cache: "no-cache", ...options };
+  const res = await fetch(`${API}${path}`, fetchOptions as RequestInit);
   if (!res.ok) throw new Error(`Failed to fetch ${path}`);
   return res.json();
 }

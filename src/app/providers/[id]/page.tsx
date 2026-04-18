@@ -7,7 +7,6 @@ import { useDispatch, useSelector } from "react-redux";
 import { addToCart } from "@/redux/features/cartSlice";
 import { RootState, AppDispatch } from "@/redux/store";
 import type { Provider, Car, Booking } from "@/types";
-import Image from "next/image";
 import { safeFetch, calcDays, datesOverlap, COLOR_MAP, today } from "@/libs/utils";
 import { useToast, Toast } from "@/components/ui/Toast";
 import Loading from "@/components/ui/Loading";
@@ -136,7 +135,7 @@ export default function ProviderDetailPage() {
             return (
               <div key={car._id} className={`card overflow-hidden ${unavailable ? "opacity-60" : ""}`}>
                 <div className="relative h-44 bg-slate-100 overflow-hidden">
-                  <Image src={car.image || "https://images.unsplash.com/photo-1494976388531-d1058494cdd8?w=800&q=80"} alt={`${car.brand} ${car.model}`} fill sizes="(max-width: 640px) 100vw, (max-width: 1024px) 50vw, 33vw" className="object-cover" />
+                  <img src={car.image || "https://images.unsplash.com/photo-1494976388531-d1058494cdd8?w=800&q=80"} alt={`${car.brand} ${car.model}`} loading="lazy" className="w-full h-full object-cover" />
                   {unavailable && (
                     <div className="absolute inset-0 bg-black/40 flex items-center justify-center">
                       <span className="text-white text-sm font-semibold bg-red-600 px-3 py-1 rounded-full">{!car.available ? "Unavailable" : booked ? "Booked" : "In Cart"}</span>
