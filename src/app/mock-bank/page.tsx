@@ -209,7 +209,7 @@ function MockBankContent() {
                   : `Confirm Payment · ฿${amount.toLocaleString()}`}
               </button>
               <button
-                onClick={() => router.back()}
+                onClick={() => router.push("/")}
                 className="btn-secondary w-full py-3 text-sm"
               >
                 Cancel
