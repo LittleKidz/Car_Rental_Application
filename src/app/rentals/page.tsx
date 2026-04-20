@@ -157,9 +157,7 @@ export default function RentalsPage() {
             const days = calcDays(r.rentalDate, r.returnDate);
             const daysUntilPickup =
               (new Date(r.rentalDate).getTime() - Date.now()) / 86_400_000;
-            const canCancel =
-              isPaid && daysUntilPickup >= 3 && r.refundStatus === "none";
-
+            const canCancel = isPaid && r.refundStatus === "none";
             return (
               <div key={r._id} className="card overflow-hidden">
                 <div className="flex flex-col sm:flex-row">
