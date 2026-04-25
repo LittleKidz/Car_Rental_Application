@@ -6,6 +6,7 @@ import { useToast, Toast } from "@/components/ui/Toast";
 import Loading from "@/components/ui/Loading";
 import Modal from "@/components/ui/Modal";
 import ConfirmDialog from "@/components/ui/ConfirmDialog";
+import { useConfirmDialog } from "@/hooks/useConfirmDialog";
 
 const EMPTY_FORM = {
   brand: "",
@@ -24,16 +25,8 @@ export default function CarsTab({ token }: { token: string }) {
   const [showForm, setShowForm] = useState(false);
   const [editId, setEditId] = useState<string | null>(null);
   const [form, setForm] = useState(EMPTY_FORM);
-  const [dialog, setDialog] = useState<{
-    open: boolean;
-    title: string;
-    message: string;
-    variant?: "danger" | "primary";
-    onConfirm: () => void;
-  }>({ open: false, title: "", message: "", onConfirm: () => {} });
+  const { dialog, closeDialog, openDialog } = useConfirmDialog();
   const [toast, showToast] = useToast();
-
-  const closeDialog = () => setDialog((d) => ({ ...d, open: false }));
 
   const load = async () => {
     const [cRes, pRes] = await Promise.all([
@@ -84,8 +77,7 @@ export default function CarsTab({ token }: { token: string }) {
   };
 
   const handleDelete = (id: string) => {
-    setDialog({
-      open: true,
+    openDialog({
       title: "Delete Car",
       message: "Delete this car permanently? This cannot be undone.",
       variant: "danger",

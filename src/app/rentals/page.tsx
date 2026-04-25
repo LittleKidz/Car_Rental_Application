@@ -10,6 +10,7 @@ import Loading from "@/components/ui/Loading";
 import DateRangeDisplay from "@/components/ui/DateRangeDisplay";
 import DateRangePicker from "@/components/ui/DateRangePicker";
 import ConfirmDialog from "@/components/ui/ConfirmDialog";
+import { useConfirmDialog } from "@/hooks/useConfirmDialog";
 
 const PAYMENT_STATUS_STYLES: Record<string, string> = {
   pending: "bg-amber-50 text-amber-700 border-amber-200",
@@ -37,15 +38,7 @@ export default function RentalsPage() {
   const [editReturn, setEditReturn] = useState("");
   const [cancelling, setCancelling] = useState<string | null>(null);
   const [showHistory, setShowHistory] = useState(false);
-  const [dialog, setDialog] = useState<{
-    open: boolean;
-    title: string;
-    message: string;
-    variant?: "danger" | "primary";
-    onConfirm: () => void;
-  }>({ open: false, title: "", message: "", onConfirm: () => {} });
-
-  const closeDialog = () => setDialog((d) => ({ ...d, open: false }));
+  const { dialog, closeDialog, openDialog } = useConfirmDialog();
   const [toast, showToast] = useToast();
 
   const token = session?.user.token ?? "";
@@ -69,8 +62,7 @@ export default function RentalsPage() {
   }, [status, token]);
 
   const handleDelete = async (id: string) => {
-    setDialog({
-      open: true,
+    openDialog({
       title: "Delete Rental",
       message: "Are you sure you want to delete this rental?",
       variant: "danger",
@@ -80,10 +72,7 @@ export default function RentalsPage() {
           method: "DELETE",
           headers: { Authorization: `Bearer ${token}` },
         }).then((r) => r.json());
-        if (res.success) {
-          showToast("Rental deleted");
-          fetchRentals();
-        }
+        if (res.success) { showToast("Rental deleted"); fetchRentals(); }
       },
     });
   };
@@ -95,26 +84,18 @@ export default function RentalsPage() {
     }
     const res = await fetch(`/api/rentals/${id}`, {
       method: "PUT",
-      headers: {
-        "Content-Type": "application/json",
-        Authorization: `Bearer ${token}`,
-      },
+      headers: { "Content-Type": "application/json", Authorization: `Bearer ${token}` },
       body: JSON.stringify({ rentalDate: editPickup, returnDate: editReturn }),
     }).then((r) => r.json());
 
-    if (res.success) {
-      showToast("Rental updated");
-      setEditId(null);
-      fetchRentals();
-    } else showToast(res.message || "Failed to update");
+    if (res.success) { showToast("Rental updated"); setEditId(null); fetchRentals(); }
+    else showToast(res.message || "Failed to update");
   };
 
   const handleCancel = async (id: string) => {
-    setDialog({
-      open: true,
+    openDialog({
       title: "Cancel Booking",
-      message:
-        "Cancel this booking and request a refund? Only bookings at least 3 days before pickup can be cancelled.",
+      message: "Cancel this booking and request a refund? Only bookings at least 3 days before pickup can be cancelled.",
       variant: "danger",
       onConfirm: async () => {
         closeDialog();
@@ -123,10 +104,8 @@ export default function RentalsPage() {
           method: "POST",
           headers: { Authorization: `Bearer ${token}` },
         }).then((r) => r.json());
-        if (res.success) {
-          showToast("Booking cancelled.");
-          fetchRentals();
-        } else showToast(res.message || "Cannot cancel");
+        if (res.success) { showToast("Booking cancelled."); fetchRentals(); }
+        else showToast(res.message || "Cannot cancel");
         setCancelling(null);
       },
     });
@@ -143,25 +122,17 @@ export default function RentalsPage() {
     const isPending = r.paymentStatus === "pending";
     const isPaid = r.paymentStatus === "paid";
     const days = calcDays(r.rentalDate, r.returnDate);
-    const canCancel =
-      isPaid &&
-      r.refundStatus === "none" &&
-      (new Date(r.rentalDate).getTime() - Date.now()) / 86_400_000 >= 3;
     const completed = isCompleted(r);
+    const canCancel = isPaid && r.refundStatus === "none" &&
+      (new Date(r.rentalDate).getTime() - Date.now()) / 86_400_000 >= 3;
+    const showCancel = isPaid && r.refundStatus === "none" && !completed;
 
     return (
-      <div
-        key={r._id}
-        className={`card overflow-hidden ${completed ? "opacity-70" : ""}`}
-      >
+      <div key={r._id} className={`card overflow-hidden ${completed ? "opacity-70" : ""}`}>
         <div className="flex flex-col sm:flex-row">
           {car?.image && (
             <div className="sm:w-48 h-32 sm:h-auto shrink-0 bg-slate-100">
-              <img
-                src={car.image}
-                alt={`${car.brand} ${car.model}`}
-                className="w-full h-full object-cover"
-              />
+              <img src={car.image} alt={`${car.brand} ${car.model}`} className="w-full h-full object-cover" />
             </div>
           )}
           <div className="flex-1 p-5 sm:p-6 flex flex-col sm:flex-row sm:items-start gap-4">
@@ -170,14 +141,8 @@ export default function RentalsPage() {
                 <h3 className="font-semibold text-slate-900">
                   {car ? `${car.brand} ${car.model}` : "Car"}
                 </h3>
-                {car && (
-                  <span className="text-xs text-slate-400">
-                    {car.licensePlate}
-                  </span>
-                )}
-                <span
-                  className={`text-[11px] font-semibold px-2 py-0.5 rounded-full border ${PAYMENT_STATUS_STYLES[r.paymentStatus]}`}
-                >
+                {car && <span className="text-xs text-slate-400">{car.licensePlate}</span>}
+                <span className={`text-[11px] font-semibold px-2 py-0.5 rounded-full border ${PAYMENT_STATUS_STYLES[r.paymentStatus]}`}>
                   {PAYMENT_STATUS_LABELS[r.paymentStatus]}
                 </span>
                 {completed && r.paymentStatus !== "refunded" && (
@@ -186,52 +151,25 @@ export default function RentalsPage() {
                   </span>
                 )}
               </div>
-              <p className="text-sm text-slate-500">
-                Provider: {prov?.name || "Unknown"}
-              </p>
+              <p className="text-sm text-slate-500">Provider: {prov?.name || "Unknown"}</p>
 
               {editId === r._id ? (
                 <div className="flex flex-wrap items-center gap-2 mt-3">
-                  <DateRangePicker
-                    compact
-                    pickup={editPickup}
-                    returnDate={editReturn}
-                    onPickupChange={setEditPickup}
-                    onReturnChange={setEditReturn}
-                  />
+                  <DateRangePicker compact pickup={editPickup} returnDate={editReturn} onPickupChange={setEditPickup} onReturnChange={setEditReturn} />
                   <div className="flex gap-2 mt-4">
-                    <button
-                      onClick={() => handleUpdate(r._id)}
-                      className="btn-primary text-xs px-3 py-1.5"
-                    >
-                      Save
-                    </button>
-                    <button
-                      onClick={() => setEditId(null)}
-                      className="btn-secondary text-xs px-3 py-1.5"
-                    >
-                      Cancel
-                    </button>
+                    <button onClick={() => handleUpdate(r._id)} className="btn-primary text-xs px-3 py-1.5">Save</button>
+                    <button onClick={() => setEditId(null)} className="btn-secondary text-xs px-3 py-1.5">Cancel</button>
                   </div>
                 </div>
               ) : (
                 <div className="mt-2">
-                  <DateRangeDisplay
-                    pickup={r.rentalDate}
-                    returnDate={r.returnDate}
-                    dailyRate={car?.dailyRate}
-                  />
+                  <DateRangeDisplay pickup={r.rentalDate} returnDate={r.returnDate} dailyRate={car?.dailyRate} />
                   <p className="text-sm font-semibold text-slate-700 mt-1">
-                    Total: ฿
-                    {r.totalAmount?.toLocaleString() ??
-                      (car ? (car.dailyRate * days).toLocaleString() : "–")}
+                    Total: ฿{r.totalAmount?.toLocaleString() ?? (car ? (car.dailyRate * days).toLocaleString() : "–")}
                   </p>
                   {r.refundStatus !== "none" && (
                     <p className="text-xs text-slate-400 mt-1">
-                      Refund:{" "}
-                      <span className="font-medium capitalize">
-                        {r.refundStatus}
-                      </span>
+                      Refund: <span className="font-medium capitalize">{r.refundStatus}</span>
                     </p>
                   )}
                 </div>
@@ -241,36 +179,28 @@ export default function RentalsPage() {
             {editId !== r._id && (
               <div className="flex flex-wrap items-center gap-2 shrink-0">
                 {isPending && !completed && (
-                  <button
-                    onClick={() => router.push(`/rentals/${r._id}/payment`)}
-                    className="btn-primary text-xs px-3 py-2"
-                  >
+                  <button onClick={() => router.push(`/rentals/${r._id}/payment`)} className="btn-primary text-xs px-3 py-2">
                     Pay Now
                   </button>
                 )}
                 {isPaid && (
-                  <button
-                    onClick={() => router.push(`/rentals/${r._id}/receipt`)}
-                    className="btn-secondary text-xs px-3 py-2"
-                  >
+                  <button onClick={() => router.push(`/rentals/${r._id}/receipt`)} className="btn-secondary text-xs px-3 py-2">
                     Receipt
                   </button>
                 )}
                 {isPending && !completed && (
                   <button
-                    onClick={() => {
-                      setEditId(r._id);
-                      setEditPickup(toInputDate(r.rentalDate));
-                      setEditReturn(toInputDate(r.returnDate));
-                    }}
+                    onClick={() => { setEditId(r._id); setEditPickup(toInputDate(r.rentalDate)); setEditReturn(toInputDate(r.returnDate)); }}
                     className="btn-secondary text-xs px-3 py-2"
-                  >
-                    Edit
-                  </button>
+                  >Edit</button>
                 )}
-                {canCancel && (
+                {showCancel && (
                   <button
-                    onClick={() => handleCancel(r._id)}
+                    onClick={() =>
+                      canCancel
+                        ? handleCancel(r._id)
+                        : showToast("Cancellation is only allowed at least 3 days before the pickup date")
+                    }
                     disabled={cancelling === r._id}
                     className="btn-danger text-xs px-3 py-2"
                   >
@@ -278,12 +208,7 @@ export default function RentalsPage() {
                   </button>
                 )}
                 {isPending && !completed && (
-                  <button
-                    onClick={() => handleDelete(r._id)}
-                    className="btn-danger text-xs px-3 py-2"
-                  >
-                    Delete
-                  </button>
+                  <button onClick={() => handleDelete(r._id)} className="btn-danger text-xs px-3 py-2">Delete</button>
                 )}
               </div>
             )}
@@ -305,9 +230,7 @@ export default function RentalsPage() {
       {rentals.length === 0 ? (
         <div className="text-center py-20 text-slate-400">
           <p className="mb-4">No rentals yet.</p>
-          <a href="/providers" className="btn-primary text-sm">
-            Browse Providers
-          </a>
+          <a href="/providers" className="btn-primary text-sm">Browse Providers</a>
         </div>
       ) : (
         <>
@@ -316,16 +239,12 @@ export default function RentalsPage() {
             <h2 className="text-lg font-semibold text-slate-800 mb-4 flex items-center gap-2">
               <span className="w-2 h-2 rounded-full bg-emerald-500 inline-block" />
               Active Bookings
-              <span className="text-sm font-normal text-slate-400">
-                ({activeRentals.length})
-              </span>
+              <span className="text-sm font-normal text-slate-400">({activeRentals.length})</span>
             </h2>
             {activeRentals.length === 0 ? (
               <div className="card p-8 text-center text-slate-400 text-sm">
                 No active bookings.{" "}
-                <a href="/providers" className="text-indigo-500 underline">
-                  Browse providers
-                </a>
+                <a href="/providers" className="text-indigo-500 underline">Browse providers</a>
               </div>
             ) : (
               <div className="space-y-4 stagger-children">
@@ -343,21 +262,12 @@ export default function RentalsPage() {
               >
                 <span className="w-2 h-2 rounded-full bg-slate-300 inline-block" />
                 History
-                <span className="text-sm font-normal text-slate-400">
-                  ({pastRentals.length})
-                </span>
+                <span className="text-sm font-normal text-slate-400">({pastRentals.length})</span>
                 <svg
                   className={`w-4 h-4 text-slate-400 ml-auto transition-transform ${showHistory ? "rotate-180" : ""}`}
-                  fill="none"
-                  viewBox="0 0 24 24"
-                  stroke="currentColor"
-                  strokeWidth={2}
+                  fill="none" viewBox="0 0 24 24" stroke="currentColor" strokeWidth={2}
                 >
-                  <path
-                    strokeLinecap="round"
-                    strokeLinejoin="round"
-                    d="M19 9l-7 7-7-7"
-                  />
+                  <path strokeLinecap="round" strokeLinejoin="round" d="M19 9l-7 7-7-7" />
                 </svg>
               </button>
 

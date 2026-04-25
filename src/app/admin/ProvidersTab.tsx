@@ -6,6 +6,7 @@ import { useToast, Toast } from "@/components/ui/Toast";
 import Loading from "@/components/ui/Loading";
 import Modal from "@/components/ui/Modal";
 import ConfirmDialog from "@/components/ui/ConfirmDialog";
+import { useConfirmDialog } from "@/hooks/useConfirmDialog";
 
 export default function ProvidersTab({ token }: { token: string }) {
   const [providers, setProviders] = useState<Provider[]>([]);
@@ -13,16 +14,8 @@ export default function ProvidersTab({ token }: { token: string }) {
   const [showForm, setShowForm] = useState(false);
   const [editId, setEditId] = useState<string | null>(null);
   const [form, setForm] = useState({ name: "", address: "", telephone: "" });
-  const [dialog, setDialog] = useState<{
-    open: boolean;
-    title: string;
-    message: string;
-    variant?: "danger" | "primary";
-    onConfirm: () => void;
-  }>({ open: false, title: "", message: "", onConfirm: () => {} });
+  const { dialog, closeDialog, openDialog } = useConfirmDialog();
   const [toast, showToast] = useToast();
-
-  const closeDialog = () => setDialog((d) => ({ ...d, open: false }));
 
   const load = async () => {
     const res = await fetch("/api/providers").then((r) => r.json());
@@ -60,8 +53,7 @@ export default function ProvidersTab({ token }: { token: string }) {
   };
 
   const handleDelete = (id: string) => {
-    setDialog({
-      open: true,
+    openDialog({
       title: "Delete Provider",
       message: "Delete this provider and all its cars? This cannot be undone.",
       variant: "danger",

@@ -15,6 +15,7 @@ import DateRangeDisplay from "@/components/ui/DateRangeDisplay";
 import DateRangePicker from "@/components/ui/DateRangePicker";
 import ConfirmDialog from "@/components/ui/ConfirmDialog";
 import { toInputDate } from "@/libs/utils";
+import { useConfirmDialog } from "@/hooks/useConfirmDialog";
 
 const PAYMENT_STATUS_OPTIONS: PaymentStatus[] = ["pending", "paid", "refunded"];
 
@@ -25,16 +26,8 @@ export default function RentalsTab({ token }: { token: string }) {
   const [editPickup, setEditPickup] = useState("");
   const [editReturn, setEditReturn] = useState("");
   const [updatingPayment, setUpdatingPayment] = useState<string | null>(null);
-  const [dialog, setDialog] = useState<{
-    open: boolean;
-    title: string;
-    message: string;
-    variant?: "danger" | "primary";
-    onConfirm: () => void;
-  }>({ open: false, title: "", message: "", onConfirm: () => {} });
+  const { dialog, closeDialog, openDialog } = useConfirmDialog();
   const [toast, showToast] = useToast();
-
-  const closeDialog = () => setDialog((d) => ({ ...d, open: false }));
 
   const load = async () => {
     const res = await fetch("/api/rentals", {
@@ -49,8 +42,7 @@ export default function RentalsTab({ token }: { token: string }) {
   }, []);
 
   const handleDelete = async (id: string) => {
-    setDialog({
-      open: true,
+    openDialog({
       title: "Delete Rental",
       message: "Delete this rental permanently?",
       variant: "danger",
@@ -119,16 +111,7 @@ export default function RentalsTab({ token }: { token: string }) {
     }).then((r) => r.json());
 
     if (res.success) {
-      if (refundStatus === "completed") {
-        // ลบ rental ออกหลัง refund สำเร็จ
-        await fetch(`/api/rentals/${id}`, {
-          method: "DELETE",
-          headers: { Authorization: `Bearer ${token}` },
-        });
-        showToast("Refund completed. Rental removed.");
-      } else {
-        showToast(`Refund status updated to ${refundStatus}`);
-      }
+      showToast(refundStatus === "completed" ? "Refund completed." : `Refund status updated to ${refundStatus}`);
       load();
     } else {
       showToast(res.message || "Failed to update");

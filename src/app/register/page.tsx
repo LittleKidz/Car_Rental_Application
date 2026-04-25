@@ -4,6 +4,7 @@ import { signIn } from "next-auth/react";
 import Link from "next/link";
 import { useRouter } from "next/navigation";
 import { useState } from "react";
+import type { ChangeEvent } from "react";
 
 export default function RegisterPage() {
   const router = useRouter();
@@ -15,6 +16,7 @@ export default function RegisterPage() {
   });
   const [error, setError] = useState("");
   const [loading, setLoading] = useState(false);
+  const [consent, setConsent] = useState(false);
 
   const set = (key: string) => (e: React.ChangeEvent<HTMLInputElement>) =>
     setForm((p) => ({ ...p, [key]: e.target.value }));
@@ -131,10 +133,37 @@ export default function RegisterPage() {
               />
             </div>
 
+            <div className="flex items-start gap-3">
+              <input
+                id="consent"
+                type="checkbox"
+                checked={consent}
+                onChange={(e: ChangeEvent<HTMLInputElement>) =>
+                  setConsent(e.target.checked)
+                }
+                className="mt-0.5 h-4 w-4 rounded border-slate-300 text-indigo-600 focus:ring-indigo-500 cursor-pointer"
+              />
+              <label
+                htmlFor="consent"
+                className="text-sm text-slate-600 cursor-pointer leading-relaxed"
+              >
+                I have read and agree to the{" "}
+                <Link
+                  href="/privacy"
+                  target="_blank"
+                  className="font-semibold text-indigo-600 hover:text-indigo-700 underline underline-offset-2"
+                >
+                  Privacy Policy
+                </Link>
+                . I consent to GoGo Rental collecting and using my personal
+                data to process my bookings.
+              </label>
+            </div>
+
             <button
               type="submit"
-              className="btn-primary w-full"
-              disabled={loading}
+              className="btn-primary w-full disabled:opacity-50 disabled:cursor-not-allowed"
+              disabled={loading || !consent}
             >
               {loading ? "Creating account..." : "Create account"}
             </button>

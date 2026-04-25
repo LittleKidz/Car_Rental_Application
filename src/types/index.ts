@@ -79,3 +79,13 @@ export interface Booking {
   rentalDate: string;
   returnDate: string;
 }
+
+export interface Review {
+  _id: string;
+  user: User | string;
+  provider: string;
+  rental: string;
+  rating: number;
+  comment?: string;
+  createdAt: string;
+}
