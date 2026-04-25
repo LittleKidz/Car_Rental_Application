@@ -23,6 +23,10 @@ const PAYMENT_STATUS_LABELS: Record<string, string> = {
   refunded: "Refunded",
 };
 
+function isCompleted(r: Rental) {
+  return new Date(r.returnDate) < new Date() || r.paymentStatus === "refunded";
+}
+
 export default function RentalsPage() {
   const { data: session, status } = useSession();
   const router = useRouter();
@@ -32,6 +36,7 @@ export default function RentalsPage() {
   const [editPickup, setEditPickup] = useState("");
   const [editReturn, setEditReturn] = useState("");
   const [cancelling, setCancelling] = useState<string | null>(null);
+  const [showHistory, setShowHistory] = useState(false);
   const [dialog, setDialog] = useState<{
     open: boolean;
     title: string;
@@ -101,9 +106,7 @@ export default function RentalsPage() {
       showToast("Rental updated");
       setEditId(null);
       fetchRentals();
-    } else {
-      showToast(res.message || "Failed to update");
-    }
+    } else showToast(res.message || "Failed to update");
   };
 
   const handleCancel = async (id: string) => {
@@ -131,6 +134,165 @@ export default function RentalsPage() {
 
   if (loading) return <Loading />;
 
+  const activeRentals = rentals.filter((r) => !isCompleted(r));
+  const pastRentals = rentals.filter((r) => isCompleted(r));
+
+  const RentalCard = (r: Rental) => {
+    const prov = r.provider as Provider;
+    const car = r.car as Car | undefined;
+    const isPending = r.paymentStatus === "pending";
+    const isPaid = r.paymentStatus === "paid";
+    const days = calcDays(r.rentalDate, r.returnDate);
+    const canCancel =
+      isPaid &&
+      r.refundStatus === "none" &&
+      (new Date(r.rentalDate).getTime() - Date.now()) / 86_400_000 >= 3;
+    const completed = isCompleted(r);
+
+    return (
+      <div
+        key={r._id}
+        className={`card overflow-hidden ${completed ? "opacity-70" : ""}`}
+      >
+        <div className="flex flex-col sm:flex-row">
+          {car?.image && (
+            <div className="sm:w-48 h-32 sm:h-auto shrink-0 bg-slate-100">
+              <img
+                src={car.image}
+                alt={`${car.brand} ${car.model}`}
+                className="w-full h-full object-cover"
+              />
+            </div>
+          )}
+          <div className="flex-1 p-5 sm:p-6 flex flex-col sm:flex-row sm:items-start gap-4">
+            <div className="flex-1 min-w-0">
+              <div className="flex items-center gap-2 flex-wrap mb-1">
+                <h3 className="font-semibold text-slate-900">
+                  {car ? `${car.brand} ${car.model}` : "Car"}
+                </h3>
+                {car && (
+                  <span className="text-xs text-slate-400">
+                    {car.licensePlate}
+                  </span>
+                )}
+                <span
+                  className={`text-[11px] font-semibold px-2 py-0.5 rounded-full border ${PAYMENT_STATUS_STYLES[r.paymentStatus]}`}
+                >
+                  {PAYMENT_STATUS_LABELS[r.paymentStatus]}
+                </span>
+                {completed && r.paymentStatus !== "refunded" && (
+                  <span className="text-[11px] font-semibold px-2 py-0.5 rounded-full border bg-slate-50 text-slate-500 border-slate-200">
+                    Completed
+                  </span>
+                )}
+              </div>
+              <p className="text-sm text-slate-500">
+                Provider: {prov?.name || "Unknown"}
+              </p>
+
+              {editId === r._id ? (
+                <div className="flex flex-wrap items-center gap-2 mt-3">
+                  <DateRangePicker
+                    compact
+                    pickup={editPickup}
+                    returnDate={editReturn}
+                    onPickupChange={setEditPickup}
+                    onReturnChange={setEditReturn}
+                  />
+                  <div className="flex gap-2 mt-4">
+                    <button
+                      onClick={() => handleUpdate(r._id)}
+                      className="btn-primary text-xs px-3 py-1.5"
+                    >
+                      Save
+                    </button>
+                    <button
+                      onClick={() => setEditId(null)}
+                      className="btn-secondary text-xs px-3 py-1.5"
+                    >
+                      Cancel
+                    </button>
+                  </div>
+                </div>
+              ) : (
+                <div className="mt-2">
+                  <DateRangeDisplay
+                    pickup={r.rentalDate}
+                    returnDate={r.returnDate}
+                    dailyRate={car?.dailyRate}
+                  />
+                  <p className="text-sm font-semibold text-slate-700 mt-1">
+                    Total: ฿
+                    {r.totalAmount?.toLocaleString() ??
+                      (car ? (car.dailyRate * days).toLocaleString() : "–")}
+                  </p>
+                  {r.refundStatus !== "none" && (
+                    <p className="text-xs text-slate-400 mt-1">
+                      Refund:{" "}
+                      <span className="font-medium capitalize">
+                        {r.refundStatus}
+                      </span>
+                    </p>
+                  )}
+                </div>
+              )}
+            </div>
+
+            {editId !== r._id && (
+              <div className="flex flex-wrap items-center gap-2 shrink-0">
+                {isPending && !completed && (
+                  <button
+                    onClick={() => router.push(`/rentals/${r._id}/payment`)}
+                    className="btn-primary text-xs px-3 py-2"
+                  >
+                    Pay Now
+                  </button>
+                )}
+                {isPaid && (
+                  <button
+                    onClick={() => router.push(`/rentals/${r._id}/receipt`)}
+                    className="btn-secondary text-xs px-3 py-2"
+                  >
+                    Receipt
+                  </button>
+                )}
+                {isPending && !completed && (
+                  <button
+                    onClick={() => {
+                      setEditId(r._id);
+                      setEditPickup(toInputDate(r.rentalDate));
+                      setEditReturn(toInputDate(r.returnDate));
+                    }}
+                    className="btn-secondary text-xs px-3 py-2"
+                  >
+                    Edit
+                  </button>
+                )}
+                {canCancel && (
+                  <button
+                    onClick={() => handleCancel(r._id)}
+                    disabled={cancelling === r._id}
+                    className="btn-danger text-xs px-3 py-2"
+                  >
+                    {cancelling === r._id ? "Cancelling…" : "Cancel"}
+                  </button>
+                )}
+                {isPending && !completed && (
+                  <button
+                    onClick={() => handleDelete(r._id)}
+                    className="btn-danger text-xs px-3 py-2"
+                  >
+                    Delete
+                  </button>
+                )}
+              </div>
+            )}
+          </div>
+        </div>
+      </div>
+    );
+  };
+
   return (
     <div className="max-w-5xl mx-auto px-4 sm:px-6 py-12">
       <Toast message={toast} />
@@ -148,166 +310,67 @@ export default function RentalsPage() {
           </a>
         </div>
       ) : (
-        <div className="space-y-4 stagger-children">
-          {rentals.map((r) => {
-            const prov = r.provider as Provider;
-            const car = r.car as Car | undefined;
-            const isPending = r.paymentStatus === "pending";
-            const isPaid = r.paymentStatus === "paid";
-            const days = calcDays(r.rentalDate, r.returnDate);
-            const daysUntilPickup =
-              (new Date(r.rentalDate).getTime() - Date.now()) / 86_400_000;
-            const canCancel = isPaid && r.refundStatus === "none";
-            return (
-              <div key={r._id} className="card overflow-hidden">
-                <div className="flex flex-col sm:flex-row">
-                  {car?.image && (
-                    <div className="sm:w-48 h-32 sm:h-auto shrink-0 bg-slate-100">
-                      <img
-                        src={car.image}
-                        alt={`${car.brand} ${car.model}`}
-                        className="w-full h-full object-cover"
-                      />
-                    </div>
-                  )}
-                  <div className="flex-1 p-5 sm:p-6 flex flex-col sm:flex-row sm:items-start gap-4">
-                    <div className="flex-1 min-w-0">
-                      <div className="flex items-center gap-2 flex-wrap mb-1">
-                        <h3 className="font-semibold text-slate-900">
-                          {car ? `${car.brand} ${car.model}` : "Car"}
-                        </h3>
-                        {car && (
-                          <span className="text-xs text-slate-400">
-                            {car.licensePlate}
-                          </span>
-                        )}
-                        {/* Payment status badge */}
-                        <span
-                          className={`text-[11px] font-semibold px-2 py-0.5 rounded-full border ${PAYMENT_STATUS_STYLES[r.paymentStatus]}`}
-                        >
-                          {PAYMENT_STATUS_LABELS[r.paymentStatus]}
-                        </span>
-                      </div>
-                      <p className="text-sm text-slate-500">
-                        Provider: {prov?.name || "Unknown"}
-                      </p>
-
-                      {editId === r._id ? (
-                        <div className="flex flex-wrap items-center gap-2 mt-3">
-                          <DateRangePicker
-                            compact
-                            pickup={editPickup}
-                            returnDate={editReturn}
-                            onPickupChange={setEditPickup}
-                            onReturnChange={setEditReturn}
-                          />
-                          <div className="flex gap-2 mt-4">
-                            <button
-                              onClick={() => handleUpdate(r._id)}
-                              className="btn-primary text-xs px-3 py-1.5"
-                            >
-                              Save
-                            </button>
-                            <button
-                              onClick={() => setEditId(null)}
-                              className="btn-secondary text-xs px-3 py-1.5"
-                            >
-                              Cancel
-                            </button>
-                          </div>
-                        </div>
-                      ) : (
-                        <div className="mt-2">
-                          <DateRangeDisplay
-                            pickup={r.rentalDate}
-                            returnDate={r.returnDate}
-                            dailyRate={car?.dailyRate}
-                          />
-                          <p className="text-sm font-semibold text-slate-700 mt-1">
-                            Total: ฿
-                            {r.totalAmount?.toLocaleString() ??
-                              (car
-                                ? (car.dailyRate * days).toLocaleString()
-                                : "–")}
-                          </p>
-                          {/* Refund status */}
-                          {r.refundStatus !== "none" && (
-                            <p className="text-xs text-slate-400 mt-1">
-                              Refund:{" "}
-                              <span className="font-medium capitalize">
-                                {r.refundStatus}
-                              </span>
-                            </p>
-                          )}
-                        </div>
-                      )}
-                    </div>
-
-                    {editId !== r._id && (
-                      <div className="flex flex-wrap items-center gap-2 shrink-0">
-                        {/* Pay Now */}
-                        {isPending && (
-                          <button
-                            onClick={() =>
-                              router.push(`/rentals/${r._id}/payment`)
-                            }
-                            className="btn-primary text-xs px-3 py-2"
-                          >
-                            Pay Now
-                          </button>
-                        )}
-                        {/* View Receipt */}
-                        {isPaid && (
-                          <button
-                            onClick={() =>
-                              router.push(`/rentals/${r._id}/receipt`)
-                            }
-                            className="btn-secondary text-xs px-3 py-2"
-                          >
-                            Receipt
-                          </button>
-                        )}
-                        {/* Edit (only pending) */}
-                        {isPending && (
-                          <button
-                            onClick={() => {
-                              setEditId(r._id);
-                              setEditPickup(toInputDate(r.rentalDate));
-                              setEditReturn(toInputDate(r.returnDate));
-                            }}
-                            className="btn-secondary text-xs px-3 py-2"
-                          >
-                            Edit
-                          </button>
-                        )}
-                        {/* Cancel (3-day policy) */}
-                        {canCancel && (
-                          <button
-                            onClick={() => handleCancel(r._id)}
-                            disabled={cancelling === r._id}
-                            className="btn-danger text-xs px-3 py-2"
-                          >
-                            {cancelling === r._id ? "Cancelling…" : "Cancel"}
-                          </button>
-                        )}
-                        {/* Delete (pending only) */}
-                        {isPending && (
-                          <button
-                            onClick={() => handleDelete(r._id)}
-                            className="btn-danger text-xs px-3 py-2"
-                          >
-                            Delete
-                          </button>
-                        )}
-                      </div>
-                    )}
-                  </div>
-                </div>
+        <>
+          {/* Active Rentals */}
+          <div className="mb-10">
+            <h2 className="text-lg font-semibold text-slate-800 mb-4 flex items-center gap-2">
+              <span className="w-2 h-2 rounded-full bg-emerald-500 inline-block" />
+              Active Bookings
+              <span className="text-sm font-normal text-slate-400">
+                ({activeRentals.length})
+              </span>
+            </h2>
+            {activeRentals.length === 0 ? (
+              <div className="card p-8 text-center text-slate-400 text-sm">
+                No active bookings.{" "}
+                <a href="/providers" className="text-indigo-500 underline">
+                  Browse providers
+                </a>
               </div>
-            );
-          })}
-        </div>
+            ) : (
+              <div className="space-y-4 stagger-children">
+                {activeRentals.map((r) => RentalCard(r))}
+              </div>
+            )}
+          </div>
+
+          {/* Past Rentals */}
+          {pastRentals.length > 0 && (
+            <div>
+              <button
+                onClick={() => setShowHistory(!showHistory)}
+                className="flex items-center gap-2 text-lg font-semibold text-slate-800 mb-4 w-full text-left"
+              >
+                <span className="w-2 h-2 rounded-full bg-slate-300 inline-block" />
+                History
+                <span className="text-sm font-normal text-slate-400">
+                  ({pastRentals.length})
+                </span>
+                <svg
+                  className={`w-4 h-4 text-slate-400 ml-auto transition-transform ${showHistory ? "rotate-180" : ""}`}
+                  fill="none"
+                  viewBox="0 0 24 24"
+                  stroke="currentColor"
+                  strokeWidth={2}
+                >
+                  <path
+                    strokeLinecap="round"
+                    strokeLinejoin="round"
+                    d="M19 9l-7 7-7-7"
+                  />
+                </svg>
+              </button>
+
+              {showHistory && (
+                <div className="space-y-4 stagger-children">
+                  {pastRentals.map((r) => RentalCard(r))}
+                </div>
+              )}
+            </div>
+          )}
+        </>
       )}
+
       <ConfirmDialog {...dialog} onCancel={closeDialog} />
     </div>
   );
