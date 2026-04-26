@@ -26,30 +26,29 @@ export default function ManageRentalsPage() {
   const handleSubmitAll = async () => {
     if (!session?.user.token) return;
     setSubmitting(true);
-    const res: { ok: boolean; msg: string }[] = [];
 
-    for (const item of cartItems) {
-      try {
-        const r = await fetch("/api/rentals", {
-          method: "POST",
-          headers: { "Content-Type": "application/json", Authorization: `Bearer ${session.user.token}` },
-          body: JSON.stringify({
-            rentalDate: item.rentalDate,
-            returnDate: item.returnDate,
-            provider: item.provider._id,
-            car: item.car._id,
-          }),
-        }).then((r) => r.json());
+    const res = await Promise.all(
+      cartItems.map(async (item) => {
+        try {
+          const r = await fetch("/api/rentals", {
+            method: "POST",
+            headers: { "Content-Type": "application/json", Authorization: `Bearer ${session.user.token}` },
+            body: JSON.stringify({
+              rentalDate: item.rentalDate,
+              returnDate: item.returnDate,
+              provider: item.provider._id,
+              car: item.car._id,
+            }),
+          }).then((r) => r.json());
 
-        res.push(
-          r.success
+          return r.success
             ? { ok: true, msg: `${item.car.brand} ${item.car.model} — Booked!` }
-            : { ok: false, msg: `${item.car.brand} ${item.car.model} — ${r.message || "Failed"}` }
-        );
-      } catch {
-        res.push({ ok: false, msg: `${item.car.brand} ${item.car.model} — Network error` });
-      }
-    }
+            : { ok: false, msg: `${item.car.brand} ${item.car.model} — ${r.message || "Failed"}` };
+        } catch {
+          return { ok: false, msg: `${item.car.brand} ${item.car.model} — Network error` };
+        }
+      }),
+    );
 
     setResults(res);
 
