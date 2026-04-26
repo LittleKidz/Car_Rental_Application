@@ -33,15 +33,19 @@ export default function NotificationBell() {
     return () => clearInterval(interval);
   }, [token]);
 
-  // Close on outside click
+  // Close on outside click/tap (mousedown for desktop, touchstart for mobile)
   useEffect(() => {
-    const handler = (e: MouseEvent) => {
+    const handler = (e: MouseEvent | TouchEvent) => {
       if (panelRef.current && !panelRef.current.contains(e.target as Node)) {
         setOpen(false);
       }
     };
     document.addEventListener("mousedown", handler);
-    return () => document.removeEventListener("mousedown", handler);
+    document.addEventListener("touchstart", handler as EventListener);
+    return () => {
+      document.removeEventListener("mousedown", handler);
+      document.removeEventListener("touchstart", handler as EventListener);
+    };
   }, []);
 
   const unreadCount = notifications.filter((n) => !n.read).length;
@@ -99,7 +103,7 @@ export default function NotificationBell() {
 
       {/* Dropdown panel */}
       {open && (
-        <div className="absolute right-0 top-10 w-80 bg-white border border-slate-200 rounded-2xl shadow-xl z-50 overflow-hidden">
+        <div className="absolute right-0 top-10 w-80 max-w-[calc(100vw-1rem)] bg-white border border-slate-200 rounded-2xl shadow-xl z-50 overflow-hidden">
           <div className="flex items-center justify-between px-4 py-3 border-b border-slate-100">
             <span className="text-sm font-semibold text-slate-800">
               Notifications
