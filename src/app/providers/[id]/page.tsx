@@ -11,7 +11,7 @@ export default async function ProviderDetailPage({ params }: { params: { id: str
 
   try {
     const res = await fetch(`${BACKEND}/api/providers/${params.id}/detail`, {
-      next: { revalidate: 30 },
+      next: { revalidate: 30, tags: [`provider-${params.id}`] },
     });
     if (res.ok) {
       const data = await res.json();
