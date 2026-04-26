@@ -1,49 +1,35 @@
 "use client";
 
-import { useEffect, useState } from "react";
+import { useState } from "react";
 import { useRouter } from "next/navigation";
 import { useSession } from "next-auth/react";
 import { useDispatch, useSelector } from "react-redux";
 import { addToCart } from "@/redux/features/cartSlice";
 import { RootState, AppDispatch } from "@/redux/store";
 import type { Provider, Car, Booking, Review } from "@/types";
-import { safeFetch, calcDays, datesOverlap, COLOR_MAP, today } from "@/libs/utils";
+import { calcDays, datesOverlap, COLOR_MAP, today } from "@/libs/utils";
 import { useToast, Toast } from "@/components/ui/Toast";
-import Loading from "@/components/ui/Loading";
 import StarRating from "@/components/ui/StarRating";
 import ReviewSection from "@/components/ReviewSection";
 
 type Props = {
   provider: Provider | null;
   initialCars: Car[];
+  initialBookings: Booking[];
   initialReviews: Review[];
 };
 
-export default function ProviderDetailClient({ provider, initialCars, initialReviews }: Props) {
+export default function ProviderDetailClient({ provider, initialCars, initialBookings, initialReviews }: Props) {
   const { data: session } = useSession();
   const dispatch = useDispatch<AppDispatch>();
   const cartItems = useSelector((state: RootState) => state.cart.cartItems);
   const router = useRouter();
 
-  const [cars, setCars] = useState<Car[]>(initialCars);
-  const [bookings, setBookings] = useState<Booking[]>([]);
-  const [loading, setLoading] = useState(true);
+  const [cars] = useState<Car[]>(initialCars);
+  const [bookings] = useState<Booking[]>(initialBookings);
   const [pickupDate, setPickupDate] = useState("");
   const [returnDate, setReturnDate] = useState("");
   const [toast, showToast] = useToast();
-
-  useEffect(() => {
-    if (!provider) { setLoading(false); return; }
-    safeFetch<{ success: boolean; data: { provider: Provider; cars: Car[]; bookings: Booking[]; reviews: Review[] } }>(
-      `/api/providers/${provider._id}/detail`
-    ).then((res) => {
-      if (res?.success) {
-        setCars(res.data.cars);
-        setBookings(res.data.bookings || []);
-      }
-      setLoading(false);
-    });
-  }, [provider]);
 
   const datesSelected = !!(pickupDate && returnDate && new Date(returnDate) > new Date(pickupDate));
   const days = calcDays(pickupDate, returnDate);
@@ -65,7 +51,6 @@ export default function ProviderDetailClient({ provider, initialCars, initialRev
     showToast(`${car.brand} ${car.model} added to cart!`);
   };
 
-  if (loading) return <Loading />;
   if (!provider) return (
     <div className="max-w-7xl mx-auto px-4 sm:px-6 py-20 text-center text-slate-400">Provider not found.</div>
   );
