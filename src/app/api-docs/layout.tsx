@@ -7,9 +7,5 @@ export default function ApiDocsLayout({
 }: {
   children: React.ReactNode;
 }) {
-  return (
-    <div className="min-h-screen bg-white">
-      {children}
-    </div>
-  );
+  return <div className="min-h-screen bg-white">{children}</div>;
 }
