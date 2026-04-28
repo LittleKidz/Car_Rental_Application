@@ -8,6 +8,7 @@ import { useRouter } from "next/navigation";
 import { useState } from "react";
 import { calcDays, formatDate } from "@/libs/utils";
 import { useToast, Toast } from "@/components/ui/Toast";
+import { revalidateProvider } from "@/app/actions/revalidate";
 
 export default function ManageRentalsPage() {
   const { data: session } = useSession();
@@ -56,6 +57,12 @@ export default function ManageRentalsPage() {
       (acc, r, i) => (r.ok ? [...acc, i] : acc),
       [],
     );
+
+    // Invalidate SSR cache for each successfully booked provider
+    const bookedProviderIds = [...new Set(successIndices.map((i) => cartItems[i].provider._id))];
+    if (bookedProviderIds.length > 0) {
+      await Promise.all(bookedProviderIds.map(revalidateProvider));
+    }
 
     if (successIndices.length === res.length) {
       dispatch(clearCart());

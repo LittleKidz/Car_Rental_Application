@@ -25,6 +25,9 @@ export default function ProvidersTab({ token }: { token: string }) {
 
   useEffect(() => {
     load();
+    const onVisible = () => { if (document.visibilityState === "visible") load(); };
+    document.addEventListener("visibilitychange", onVisible);
+    return () => document.removeEventListener("visibilitychange", onVisible);
   }, []);
 
   const resetForm = () => {

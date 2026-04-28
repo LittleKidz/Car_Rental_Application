@@ -1,6 +1,6 @@
 "use client";
 
-import { useState, useCallback } from "react";
+import { useState, useCallback, useEffect } from "react";
 import { useRouter } from "next/navigation";
 import { useSession } from "next-auth/react";
 import { useDispatch, useSelector } from "react-redux";
@@ -26,7 +26,7 @@ export default function ProviderDetailClient({ provider, initialCars, initialBoo
   const router = useRouter();
 
   const [cars] = useState<Car[]>(initialCars);
-  const [bookings] = useState<Booking[]>(initialBookings);
+  const [bookings, setBookings] = useState<Booking[]>(initialBookings);
   const [liveReviews, setLiveReviews] = useState<Review[]>(initialReviews);
   const [pickupDate, setPickupDate] = useState("");
   const [returnDate, setReturnDate] = useState("");
@@ -35,6 +35,20 @@ export default function ProviderDetailClient({ provider, initialCars, initialBoo
   const handleReviewsChange = useCallback((reviews: Review[]) => {
     setLiveReviews(reviews);
   }, []);
+
+  useEffect(() => {
+    if (!provider) return;
+    const fetchBookings = async () => {
+      try {
+        const res = await fetch(`/api/providers/${provider._id}/cars/bookings`).then((r) => r.json());
+        if (res.success) setBookings(res.data);
+      } catch {}
+    };
+    fetchBookings();
+    const onVisible = () => { if (document.visibilityState === "visible") fetchBookings(); };
+    document.addEventListener("visibilitychange", onVisible);
+    return () => document.removeEventListener("visibilitychange", onVisible);
+  }, [provider?._id]);
 
   const datesSelected = !!(pickupDate && returnDate && new Date(returnDate) > new Date(pickupDate));
   const days = calcDays(pickupDate, returnDate);
