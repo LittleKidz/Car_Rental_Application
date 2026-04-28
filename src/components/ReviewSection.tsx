@@ -6,6 +6,7 @@ import type { Review } from "@/types";
 import StarRating from "@/components/ui/StarRating";
 import ConfirmDialog from "@/components/ui/ConfirmDialog";
 import { useToast, Toast } from "@/components/ui/Toast";
+import { revalidateProvider } from "@/app/actions/revalidate";
 
 interface Props {
   providerId: string;
@@ -122,7 +123,7 @@ export default function ReviewSection({ providerId, initialReviews, onReviewsCha
       if (res.success) {
         showToast("Review updated!");
         resetForm();
-        fetchReviews();
+        await Promise.all([fetchReviews(), revalidateProvider(providerId)]);
       } else showToast(res.message || "Failed to update review");
     } else {
       // Create new review
@@ -139,7 +140,7 @@ export default function ReviewSection({ providerId, initialReviews, onReviewsCha
       if (res.success) {
         showToast("Review submitted!");
         resetForm();
-        fetchReviews();
+        await Promise.all([fetchReviews(), revalidateProvider(providerId)]);
         checkCanReview();
       } else showToast(res.message || "Failed to submit review");
     }
@@ -171,7 +172,7 @@ export default function ReviewSection({ providerId, initialReviews, onReviewsCha
         ).then((r) => r.json());
         if (res.success) {
           showToast("Review deleted");
-          fetchReviews();
+          await Promise.all([fetchReviews(), revalidateProvider(providerId)]);
         } else showToast(res.message || "Failed to delete");
       },
     });
