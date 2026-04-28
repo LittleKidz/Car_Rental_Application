@@ -9,6 +9,8 @@ interface ProxyOptions {
   auth?: boolean;
   /** Fallback JSON returned on error (default: `{ success: false }`). */
   fallback?: Record<string, unknown>;
+  /** If true, skip the 30-second Data Cache even for public GET requests. */
+  noStore?: boolean;
 }
 
 /**
@@ -29,7 +31,7 @@ export async function proxy(
   req?: NextRequest,
   opts: ProxyOptions = {},
 ): Promise<NextResponse> {
-  const { method, auth = false, fallback } = opts;
+  const { method, auth = false, fallback, noStore = false } = opts;
   const httpMethod = method ?? req?.method ?? "GET";
 
   try {
@@ -44,7 +46,7 @@ export async function proxy(
     const init: RequestInit = {
       method: httpMethod,
       headers,
-      ...(httpMethod === "GET" && !auth
+      ...(httpMethod === "GET" && !auth && !noStore
         ? { next: { revalidate: 30 } }
         : { cache: "no-store" }),
     };

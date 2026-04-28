@@ -4,7 +4,7 @@ import { proxy } from "@/libs/proxy";
 type Ctx = { params: { id: string } };
 
 export const GET = (_: NextRequest, { params }: Ctx) =>
-  proxy(`/api/providers/${params.id}/reviews`);
+  proxy(`/api/providers/${params.id}/reviews`, undefined, { noStore: true });
 
 export const POST = (req: NextRequest, { params }: Ctx) =>
   proxy(`/api/providers/${params.id}/reviews`, req, { auth: true });
