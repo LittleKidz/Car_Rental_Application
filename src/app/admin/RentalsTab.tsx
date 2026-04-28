@@ -9,6 +9,7 @@ import type {
   PaymentStatus,
   RefundStatus,
 } from "@/types";
+import { revalidateProvider } from "@/app/actions/revalidate";
 import { useToast, Toast } from "@/components/ui/Toast";
 import Loading from "@/components/ui/Loading";
 import DateRangeDisplay from "@/components/ui/DateRangeDisplay";
@@ -80,6 +81,12 @@ export default function RentalsTab({ token }: { token: string }) {
     } else showToast(res.message || "Failed to update");
   };
 
+  const getProviderId = (id: string) => {
+    const rental = rentals.find((r) => r._id === id);
+    if (!rental) return null;
+    return typeof rental.provider === "object" ? (rental.provider as Provider)._id : rental.provider;
+  };
+
   const handlePaymentStatus = async (
     id: string,
     paymentStatus: PaymentStatus,
@@ -96,6 +103,8 @@ export default function RentalsTab({ token }: { token: string }) {
 
     if (res.success) {
       showToast(`Status updated to ${paymentStatus}`);
+      const providerId = getProviderId(id);
+      if (providerId) await revalidateProvider(providerId);
       load();
     } else showToast(res.message || "Failed to update status");
     setUpdatingPayment(null);
@@ -115,6 +124,8 @@ export default function RentalsTab({ token }: { token: string }) {
 
     if (res.success) {
       showToast(refundStatus === "completed" ? "Refund completed." : `Refund status updated to ${refundStatus}`);
+      const providerId = getProviderId(id);
+      if (providerId) await revalidateProvider(providerId);
       load();
     } else {
       showToast(res.message || "Failed to update");
