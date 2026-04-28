@@ -1,6 +1,6 @@
 "use client";
 
-import { useState } from "react";
+import { useState, useCallback } from "react";
 import { useRouter } from "next/navigation";
 import { useSession } from "next-auth/react";
 import { useDispatch, useSelector } from "react-redux";
@@ -27,9 +27,14 @@ export default function ProviderDetailClient({ provider, initialCars, initialBoo
 
   const [cars] = useState<Car[]>(initialCars);
   const [bookings] = useState<Booking[]>(initialBookings);
+  const [liveReviews, setLiveReviews] = useState<Review[]>(initialReviews);
   const [pickupDate, setPickupDate] = useState("");
   const [returnDate, setReturnDate] = useState("");
   const [toast, showToast] = useToast();
+
+  const handleReviewsChange = useCallback((reviews: Review[]) => {
+    setLiveReviews(reviews);
+  }, []);
 
   const datesSelected = !!(pickupDate && returnDate && new Date(returnDate) > new Date(pickupDate));
   const days = calcDays(pickupDate, returnDate);
@@ -56,8 +61,8 @@ export default function ProviderDetailClient({ provider, initialCars, initialBoo
   );
 
   const todayStr = today();
-  const avgRating = initialReviews.length
-    ? Math.round((initialReviews.reduce((s, r) => s + r.rating, 0) / initialReviews.length) * 10) / 10
+  const avgRating = liveReviews.length
+    ? Math.round((liveReviews.reduce((s, r) => s + r.rating, 0) / liveReviews.length) * 10) / 10
     : 0;
 
   return (
@@ -77,11 +82,11 @@ export default function ProviderDetailClient({ provider, initialCars, initialBoo
             <p className="text-slate-500 mt-1">{provider.address}</p>
             {provider.telephone && <p className="text-sm text-slate-400 mt-1">Tel: {provider.telephone}</p>}
             {/* Average rating */}
-            {initialReviews.length > 0 && (
+            {liveReviews.length > 0 && (
               <div className="flex items-center gap-2 mt-2">
                 <StarRating value={Math.round(avgRating)} size="sm" readonly />
                 <span className="text-sm font-semibold text-slate-700">{avgRating}</span>
-                <span className="text-sm text-slate-400">({initialReviews.length} review{initialReviews.length > 1 ? "s" : ""})</span>
+                <span className="text-sm text-slate-400">({liveReviews.length} review{liveReviews.length > 1 ? "s" : ""})</span>
               </div>
             )}
           </div>
@@ -186,7 +191,7 @@ export default function ProviderDetailClient({ provider, initialCars, initialBoo
       )}
 
       {/* Reviews */}
-      <ReviewSection providerId={provider._id} initialReviews={initialReviews} />
+      <ReviewSection providerId={provider._id} initialReviews={initialReviews} onReviewsChange={handleReviewsChange} />
     </div>
   );
 }

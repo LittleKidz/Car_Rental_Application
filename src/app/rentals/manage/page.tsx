@@ -52,12 +52,23 @@ export default function ManageRentalsPage() {
 
     setResults(res);
 
-    if (res.every((r) => r.ok)) {
+    const successIndices = res.reduce<number[]>(
+      (acc, r, i) => (r.ok ? [...acc, i] : acc),
+      [],
+    );
+
+    if (successIndices.length === res.length) {
       dispatch(clearCart());
       showToast("Bookings confirmed! Proceed to payment.");
       setTimeout(() => router.push("/rentals"), 1500);
     } else {
-      showToast("Some bookings failed. Check details below.");
+      // Remove only successfully booked items from cart (keep failed ones)
+      successIndices.reverse().forEach((i) => dispatch(removeFromCart(i)));
+      showToast(
+        successIndices.length > 0
+          ? "Some bookings failed. Successfully booked items removed from cart."
+          : "All bookings failed. Check details below.",
+      );
     }
     setSubmitting(false);
   };

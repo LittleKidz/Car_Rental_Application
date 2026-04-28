@@ -57,12 +57,12 @@ export default function PaymentPage({ params }: { params: { id: string } }) {
         setRental(rentalRes.data);
         if (qrRes.success) {
           setQrUrl(qrRes.data.url);
-          console.log("🔗 Mock Bank URL:", qrRes.data.url);
         }
       } catch {
         setError("Failed to load payment details.");
+      } finally {
+        setLoading(false);
       }
-      setLoading(false);
     }
 
     init();

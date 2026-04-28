@@ -10,6 +10,7 @@ import { useToast, Toast } from "@/components/ui/Toast";
 interface Props {
   providerId: string;
   initialReviews: Review[];
+  onReviewsChange?: (reviews: Review[]) => void;
 }
 
 function formatDate(d: string) {
@@ -20,7 +21,7 @@ function formatDate(d: string) {
   });
 }
 
-export default function ReviewSection({ providerId, initialReviews }: Props) {
+export default function ReviewSection({ providerId, initialReviews, onReviewsChange }: Props) {
   const [selectedRentalId, setSelectedRentalId] = useState("");
   const { data: session } = useSession();
   const [reviews, setReviews] = useState<Review[]>(initialReviews);
@@ -64,6 +65,7 @@ export default function ReviewSection({ providerId, initialReviews }: Props) {
     }).then((r) => r.json());
     if (res.success) {
       setReviews(res.data);
+      onReviewsChange?.(res.data);
     }
   };
 
