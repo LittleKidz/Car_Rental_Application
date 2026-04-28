@@ -6,7 +6,7 @@ import "swagger-ui-react/swagger-ui.css";
 export default function ApiDocsPage() {
   return (
     <div className="w-full">
-      <SwaggerUI url="/swagger.json" />
+      <SwaggerUI url="/api/swagger" />
     </div>
   );
 }
